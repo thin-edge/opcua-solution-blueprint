@@ -1,0 +1,361 @@
+{
+  "com_cumulocity_opcua_common_model_mapping_DeviceType": {
+    "applyConstraints": {
+      "browsePathMatchesRegex": "",
+      "matchesNodeIds": [],
+      "matchesServerIds": [],
+      "serverHasNodeWithValues": null,
+      "serverObjectHasFragment": ""
+    },
+    "description": "Device Type for Pump01",
+    "enabled": true,
+    "mappings": [
+      {
+        "alarmCreation": null,
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:flow"
+        ],
+        "customAction": null,
+        "eventCreation": null,
+        "measurementCreation": {
+          "fragmentName": "flow",
+          "mappingActionName": "Measurement",
+          "overriddenProcessingMode": null,
+          "series": "flow",
+          "staticFragments": null,
+          "supportedProcessingModes": [
+            "QUIESCENT",
+            "TRANSIENT",
+            "CEP",
+            "PERSISTENT"
+          ],
+          "type": "flow",
+          "unit": "l/m"
+        },
+        "name": "flow",
+        "referencedNodeId": null
+      },
+      {
+        "alarmCreation": null,
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:operatingLevel"
+        ],
+        "customAction": null,
+        "eventCreation": null,
+        "measurementCreation": {
+          "fragmentName": "operatingLevel",
+          "mappingActionName": "Measurement",
+          "overriddenProcessingMode": null,
+          "series": "operatingLevel",
+          "staticFragments": null,
+          "supportedProcessingModes": [
+            "QUIESCENT",
+            "TRANSIENT",
+            "CEP",
+            "PERSISTENT"
+          ],
+          "type": "operatingLevel",
+          "unit": "%"
+        },
+        "name": "operatingLevel",
+        "referencedNodeId": null
+      },
+      {
+        "alarmCreation": null,
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:bearingTemperature"
+        ],
+        "customAction": null,
+        "eventCreation": null,
+        "measurementCreation": {
+          "fragmentName": "bearingTemperature",
+          "mappingActionName": "Measurement",
+          "overriddenProcessingMode": null,
+          "series": "bearingTemperature",
+          "staticFragments": null,
+          "supportedProcessingModes": [
+            "QUIESCENT",
+            "TRANSIENT",
+            "CEP",
+            "PERSISTENT"
+          ],
+          "type": "bearingTemperature",
+          "unit": "c"
+        },
+        "name": "bearingTemperature",
+        "referencedNodeId": null
+      },
+      {
+        "alarmCreation": null,
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:runHours"
+        ],
+        "customAction": null,
+        "eventCreation": null,
+        "measurementCreation": {
+          "fragmentName": "runHours",
+          "mappingActionName": "Measurement",
+          "overriddenProcessingMode": null,
+          "series": "runHours",
+          "staticFragments": null,
+          "supportedProcessingModes": [
+            "QUIESCENT",
+            "TRANSIENT",
+            "CEP",
+            "PERSISTENT"
+          ],
+          "type": "runHours",
+          "unit": "h"
+        },
+        "name": "runHours",
+        "referencedNodeId": null
+      },
+      {
+        "alarmCreation": {
+          "mappingActionName": "Alarm",
+          "overriddenProcessingMode": null,
+          "severity": "CRITICAL",
+          "staticFragments": null,
+          "status": null,
+          "supportedProcessingModes": [
+            "PERSISTENT"
+          ],
+          "text": "Pump in alert state",
+          "type": "pumpAlert"
+        },
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:activeAlarm"
+        ],
+        "customAction": null,
+        "eventCreation": null,
+        "measurementCreation": null,
+        "name": "activeAlarm",
+        "referencedNodeId": null
+      },
+      {
+        "alarmCreation": null,
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:status"
+        ],
+        "customAction": null,
+        "eventCreation": {
+          "mappingActionName": "Event",
+          "overriddenProcessingMode": null,
+          "staticFragments": null,
+          "supportedProcessingModes": [
+            "QUIESCENT",
+            "TRANSIENT",
+            "CEP",
+            "PERSISTENT"
+          ],
+          "text": "Pump state ${value}",
+          "type": "pumpState"
+        },
+        "measurementCreation": null,
+        "name": "status",
+        "referencedNodeId": null
+      },
+      {
+        "alarmCreation": null,
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:inflowTemperature"
+        ],
+        "customAction": null,
+        "eventCreation": null,
+        "measurementCreation": {
+          "fragmentName": "inflowTemperature",
+          "mappingActionName": "Measurement",
+          "overriddenProcessingMode": null,
+          "series": "inflowTemperature",
+          "staticFragments": null,
+          "supportedProcessingModes": [
+            "QUIESCENT",
+            "TRANSIENT",
+            "CEP",
+            "PERSISTENT"
+          ],
+          "type": "inflowTemperature",
+          "unit": "c"
+        },
+        "name": "inflowTemperature",
+        "referencedNodeId": null
+      },
+      {
+        "alarmCreation": null,
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:filterState"
+        ],
+        "customAction": null,
+        "eventCreation": null,
+        "measurementCreation": {
+          "fragmentName": "filterState",
+          "mappingActionName": "Measurement",
+          "overriddenProcessingMode": null,
+          "series": "filterState",
+          "staticFragments": null,
+          "supportedProcessingModes": [
+            "QUIESCENT",
+            "TRANSIENT",
+            "CEP",
+            "PERSISTENT"
+          ],
+          "type": "filterState",
+          "unit": "%"
+        },
+        "name": "filterState",
+        "referencedNodeId": null
+      },
+      {
+        "alarmCreation": null,
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:power"
+        ],
+        "customAction": null,
+        "eventCreation": null,
+        "measurementCreation": {
+          "fragmentName": "power",
+          "mappingActionName": "Measurement",
+          "overriddenProcessingMode": null,
+          "series": "power",
+          "staticFragments": null,
+          "supportedProcessingModes": [
+            "QUIESCENT",
+            "TRANSIENT",
+            "CEP",
+            "PERSISTENT"
+          ],
+          "type": "power",
+          "unit": "W"
+        },
+        "name": "power",
+        "referencedNodeId": null
+      },
+      {
+        "alarmCreation": null,
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:filterDegradationRate"
+        ],
+        "customAction": null,
+        "eventCreation": null,
+        "measurementCreation": null,
+        "name": "filterDegradationRate",
+        "referencedNodeId": null
+      }
+    ],
+    "name": "Pump01",
+    "overriddenSubscriptions": [
+      {
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:operatingLevel"
+        ],
+        "subscriptionType": {
+          "cyclicReadParameters": {
+            "maxAge": 0,
+            "rate": 50,
+            "valid": true
+          },
+          "subscriptionParameters": {
+            "dataChangeTrigger": "StatusValue",
+            "deadbandType": "None",
+            "deadbandValue": null,
+            "discardOldest": true,
+            "queueSize": 10,
+            "ranges": "",
+            "samplingRate": 1000
+          },
+          "type": "Subscription"
+        }
+      },
+      {
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:activeAlarm"
+        ],
+        "subscriptionType": {
+          "cyclicReadParameters": {
+            "maxAge": 0,
+            "rate": 50,
+            "valid": true
+          },
+          "subscriptionParameters": {
+            "dataChangeTrigger": "StatusValue",
+            "deadbandType": "None",
+            "deadbandValue": null,
+            "discardOldest": true,
+            "queueSize": 10,
+            "ranges": "",
+            "samplingRate": 1000
+          },
+          "type": "Subscription"
+        }
+      },
+      {
+        "browsePath": [
+          "http://opcfoundation.org/UA/:Objects",
+          "http://www.cumulocity.com:Pump01",
+          "http://www.cumulocity.com:status"
+        ],
+        "subscriptionType": {
+          "cyclicReadParameters": {
+            "maxAge": 0,
+            "rate": 50,
+            "valid": true
+          },
+          "subscriptionParameters": {
+            "dataChangeTrigger": "StatusValue",
+            "deadbandType": "None",
+            "deadbandValue": null,
+            "discardOldest": true,
+            "queueSize": 10,
+            "ranges": "",
+            "samplingRate": 1000
+          },
+          "type": "Subscription"
+        }
+      }
+    ],
+    "processingMode": null,
+    "referencedNamespaceTable": [
+      "http://opcfoundation.org/UA/",
+      "urn:freeopcua:python:server",
+      "http://www.cumulocity.com"
+    ],
+    "referencedRootNodeId": "nsu=http://opcfoundation.org/UA/;i=84",
+    "referencedServerId": "952951380",
+    "referencedServerName": null,
+    "subscriptionType": {
+      "cyclicReadParameters": {
+        "maxAge": 0,
+        "rate": 3000,
+        "valid": true
+      },
+      "subscriptionParameters": null,
+      "type": "CyclicRead"
+    },
+    "uaEventMappings": null
+  },
+  "type": "c8y_OpcuaDeviceType"
+}
