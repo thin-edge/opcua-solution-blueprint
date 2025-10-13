@@ -1,0 +1,12 @@
+services:
+  opcserver:
+    container_name: opcserver
+    image: ghcr.io/thin-edge/opc-ua-demo-server:latest
+    restart: always
+    ports:
+      - "4840:4840"
+    networks:
+      backend:
+networks:
+  backend:
+    name: opc-ua-gateway_backend
