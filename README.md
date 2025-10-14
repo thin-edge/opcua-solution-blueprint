@@ -67,7 +67,7 @@ c8y software versions install \
 --software opc-ua-device-gateway \
 --version 0.0.1
 ```
-* After a short while both containers should be running in the demo container. The now running opc-ua-device-gateway will automatically create a childDevice under ThinEdge-cooling-line3 with the name OPCUAGateway. .
+* After a short while both containers should be running in the demo container. The now running opc-ua-device-gateway will automatically create a childDevice under `ThinEdge-cooling-line3` with the name `OPCUAGateway`.
 
 ### Connect the gateway to the opc-ua server
 * Configure a new OPC UA Server in the OPCUAGateway child device using the web UI like:
@@ -75,14 +75,14 @@ c8y software versions install \
 ![Configure OPC UA Server](images/configure_opc_server.png)
 * Name the server `OPC-UA Server Cooling Line 3`
 * Server URL: `opc.tcp://opcserver:4840`  is the container name of the opc-ua-demo-server in the docker-compose file. Since both containers are running in the same podman instance inside the demo container they can reach each other via container name.
-* Security Policy: None
-* Security Mode: None
+* Security Policy: `None`
+* Security Mode: `None`
 
 ### Check OPC UA Server connection and namespace
 
-* After saving the server configuration a new child device with the name OPC-UA Server Cooling Line 3 should appear under device OPCUAGateway
-* To check if the connection to the server was successful you can check whether there is a new operation under control tab which says "[AUTO] Address space import from Root node"
-* After the address scan is finished you should see an entry under Address Space. You can now browse the namespace of the opc-ua-demo-server.
+* After saving the server configuration a new child device with the name `OPC-UA Server Cooling Line 3` should appear under device `OPCUAGateway`
+* To check if the connection to the server was successful you can check whether there is a new operation under control tab which says `[AUTO] Address space import from Root node`
+* After the address scan is finished (can take a few minutes) you should see an entry under Address Space. You can now browse the namespace of the opc-ua-demo-server.
 ![OPC UA Namespace](images/address_space.png)
 
 ### Create a device protocol to read pump metrics
@@ -91,10 +91,7 @@ c8y software versions install \
 * You can find the protocol file [here](./device-protocols/opc-ua-pump-device-protocol.json) it can also be imported using the cli like:
 
 ```bash
-c8y inventory create \
---name "Pump01" \
---type c8y_OpcuaDeviceType \
---data ./device-protocols/opc-ua-pump-device-protocol.json
+wget https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/device-protocols/opc-ua-pump-device-protocol.json -O - | c8y inventory create --name "Pump01" --type c8y_OpcuaDeviceType --template input.value
 ```
 
 * After importing the protocol a new device with the name Pump01 should appear in your inventory. It is automatically assigned to the OPCUAGateway device as a child device.
