@@ -1,0 +1,680 @@
+{
+  "c8y_Dashboard!device!###DASHBOARD_DEVICE_ID###": {},
+  "c8y_Dashboard": {
+    "author": "27259e98-e3ce-42f5-99e0-ec5f78a74ac5",
+    "children": {
+      "27233aa1-288e-4043-9a1c-8abf14ba9d52": {
+        "_height": 2,
+        "_width": 4,
+        "_x": 16,
+        "_y": 2,
+        "classes": {
+          "alerts-overlay": false,
+          "card": true,
+          "card-dashboard": true,
+          "kpi-widget": true,
+          "panel-title-regular": true
+        },
+        "componentId": "kpi.widget",
+        "config": {
+          "datapoints": [
+            {
+              "__active": true,
+              "__target": {
+                "id": "###DASHBOARD_DEVICE_ID###",
+                "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+              },
+              "__template": null,
+              "color": "#acc475",
+              "fragment": "runHours",
+              "label": "runHours → runHours",
+              "lineType": "line",
+              "renderType": "min",
+              "series": "runHours",
+              "unit": "h",
+              "yAxisType": null
+            }
+          ],
+          "fontSize": 36,
+          "icon": "time-machine",
+          "numberOfDecimalPlaces": 0,
+          "showIcon": true,
+          "showTimestamp": true,
+          "showTrend": true
+        },
+        "id": "27233aa1-288e-4043-9a1c-8abf14ba9d52",
+        "title": "Run Hours"
+      },
+      "28ee827a-11be-45b6-a7dc-42f12118b048": {
+        "_height": 4,
+        "_width": 6,
+        "_x": 5,
+        "_y": 0,
+        "classes": {
+          "alerts-overlay": false,
+          "card": true,
+          "card-dashboard": true,
+          "kpi-radial-gauge": true,
+          "panel-title-regular": true
+        },
+        "componentId": "KPI Radial Gauge",
+        "config": {
+          "datapoints": [],
+          "datapointsGauge": [
+            {
+              "__active": true,
+              "__target": {
+                "c8y_IsDevice": {},
+                "id": "###DASHBOARD_DEVICE_ID###",
+                "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+              },
+              "__template": null,
+              "color": "#13866a",
+              "fragment": "filterState",
+              "label": "filterState → filterState",
+              "lineType": "line",
+              "max": 100,
+              "min": 0,
+              "redRangeMax": 50,
+              "redRangeMin": 0,
+              "renderType": "min",
+              "series": "filterState",
+              "unit": "%",
+              "yAxisType": null,
+              "yellowRangeMax": 70,
+              "yellowRangeMin": 50
+            }
+          ],
+          "datapointsLabels": [],
+          "fractionSize": 0,
+          "gaugeOptions": {
+            "anchor": {
+              "itemStyle": {
+                "borderWidth": 10
+              },
+              "show": true,
+              "showAbove": true,
+              "sizeRatio": 0.1
+            },
+            "axisLabelColor": "#212121",
+            "axisLabelDistanceRatio": -1,
+            "axisLabelFontSizeMax": 32,
+            "axisLabelFontSizeMin": 7,
+            "axisLabelFontSizeRatio": 0.04,
+            "axisLineWidthRatio": 0.075,
+            "dateColor": "black",
+            "dateFontMax": 16,
+            "dateFontMin": 10,
+            "dateFontRatio": 0.03,
+            "detailOffsetCenter": [
+              "0%",
+              "35%"
+            ],
+            "endAngle": 300,
+            "id": "progress-indicator",
+            "measurementValueColor": "black",
+            "measurementValueFontMax": 56,
+            "measurementValueFontMin": 12,
+            "measurementValueFontRatio": 0.08,
+            "name": "Progress indicator",
+            "pointerColor": "black",
+            "pointerLength": "100%",
+            "pointerOffset": 5,
+            "pointerStyle": "default",
+            "pointerWidthRatio": 0.2,
+            "progressBar": true,
+            "progressBarColor": "#119d11",
+            "progressBarRoundCap": false,
+            "progressBarWidthRatio": 0.3333,
+            "radius": "85%",
+            "showDetail": true,
+            "showMarkPoint": false,
+            "showPointer": true,
+            "splitLineColor": "#fff",
+            "splitLineDistanceRatio": -1,
+            "splitLineLengthRatio": 1,
+            "splitLineWidth": 2,
+            "splitNumber": 4,
+            "startAngle": 240,
+            "tickShow": false,
+            "unitColor": "black",
+            "unitFontMax": 40,
+            "unitFontMin": 10,
+            "unitFontRatio": 0.045,
+            "unitFontSize": 18
+          },
+          "gaugePresetId": "progress-indicator",
+          "selectedPresetId": "progress-indicator"
+        },
+        "id": "28ee827a-11be-45b6-a7dc-42f12118b048",
+        "title": "Filter State (%)"
+      },
+      "5bced09f-cd0f-4122-a34f-2542d5af3f06": {
+        "_height": 6,
+        "_width": 18,
+        "_x": 0,
+        "_y": 4,
+        "classes": {
+          "alerts-overlay": false,
+          "card": true,
+          "card-dashboard": true,
+          "data-points-graph": true,
+          "panel-title-regular": true
+        },
+        "componentId": "Data points graph",
+        "config": {
+          "alarmsEventsConfigs": [
+            {
+              "__active": true,
+              "__target": {
+                "id": "###DASHBOARD_DEVICE_ID###",
+                "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+              },
+              "color": "#801FFF",
+              "filters": {
+                "type": "pumpAlert"
+              },
+              "label": "pumpAlert",
+              "timelineType": "ALARM"
+            }
+          ],
+          "canDecoupleGlobalTimeContext": false,
+          "datapoints": [
+            {
+              "__active": true,
+              "__target": {
+                "id": "###DASHBOARD_DEVICE_ID###",
+                "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+              },
+              "__template": null,
+              "color": "#20c820",
+              "fragment": "flow",
+              "label": "Flow",
+              "lineType": "line",
+              "max": 8,
+              "min": 0,
+              "renderType": "min",
+              "series": "flow",
+              "unit": "l/m",
+              "yAxisType": null
+            },
+            {
+              "__active": true,
+              "__target": {
+                "id": "###DASHBOARD_DEVICE_ID###",
+                "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+              },
+              "__template": null,
+              "color": "#d132c2",
+              "fragment": "power",
+              "label": "Power",
+              "lineType": "line",
+              "max": 1000,
+              "min": 0,
+              "renderType": "min",
+              "series": "power",
+              "unit": "W",
+              "yAxisType": null
+            },
+            {
+              "__active": true,
+              "__target": {
+                "id": "###DASHBOARD_DEVICE_ID###",
+                "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+              },
+              "__template": null,
+              "color": "#13866a",
+              "fragment": "filterState",
+              "label": "Filer State",
+              "lineType": "line",
+              "max": 100,
+              "min": 0,
+              "renderType": "min",
+              "series": "filterState",
+              "unit": "",
+              "yAxisType": null
+            }
+          ],
+          "date": [
+            "2025-10-01T13:24:18.715Z",
+            "2025-10-02T13:24:18.715Z"
+          ],
+          "dateFrom": "2025-10-07T13:07:46.000Z",
+          "dateTo": "2025-10-07T14:07:46.000Z",
+          "displayDateSelection": false,
+          "displaySettings": {
+            "globalAggregationContext": true,
+            "globalRealtimeContext": true,
+            "globalTimeContext": true
+          },
+          "interval": "hours",
+          "realtime": true,
+          "sliderChange": false,
+          "widgetInstanceGlobalTimeContext": false
+        },
+        "configTemplateUrl": "dataPointExplorer/views/widgetConfig.html",
+        "id": "5bced09f-cd0f-4122-a34f-2542d5af3f06",
+        "templateUrl": "dataPointExplorer/views/widget.html",
+        "title": "Pump State"
+      },
+      "9a328918-5a84-43a8-95d6-47c117d4b9a6": {
+        "_height": 4,
+        "_width": 5,
+        "_x": 11,
+        "_y": 0,
+        "classes": {
+          "alerts-overlay": false,
+          "card": true,
+          "card-dashboard": true,
+          "kpi-radial-gauge": true,
+          "panel-title-regular": true
+        },
+        "componentId": "KPI Radial Gauge",
+        "config": {
+          "datapoints": [],
+          "datapointsGauge": [
+            {
+              "__active": true,
+              "__target": {
+                "c8y_IsDevice": {},
+                "id": "###DASHBOARD_DEVICE_ID###",
+                "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+              },
+              "__template": null,
+              "color": "#d1335b",
+              "fragment": "power",
+              "label": "power → power",
+              "lineType": "line",
+              "max": 1000,
+              "min": 0,
+              "redRangeMax": 1000,
+              "redRangeMin": 600,
+              "renderType": "min",
+              "series": "power",
+              "unit": "",
+              "yAxisType": null,
+              "yellowRangeMax": 600,
+              "yellowRangeMin": 400
+            }
+          ],
+          "datapointsLabels": [],
+          "fractionSize": 0,
+          "gaugeOptions": {
+            "anchor": {
+              "itemStyle": {
+                "borderWidth": 10
+              },
+              "show": true,
+              "showAbove": true,
+              "sizeRatio": 0.1
+            },
+            "axisLabelColor": "#212121",
+            "axisLabelDistanceRatio": -1,
+            "axisLabelFontSizeMax": 32,
+            "axisLabelFontSizeMin": 7,
+            "axisLabelFontSizeRatio": 0.04,
+            "axisLineWidthRatio": 0.075,
+            "dateColor": "black",
+            "dateFontMax": 16,
+            "dateFontMin": 10,
+            "dateFontRatio": 0.03,
+            "detailOffsetCenter": [
+              "0%",
+              "35%"
+            ],
+            "endAngle": 300,
+            "id": "progress-indicator",
+            "measurementValueColor": "black",
+            "measurementValueFontMax": 56,
+            "measurementValueFontMin": 12,
+            "measurementValueFontRatio": 0.08,
+            "name": "Progress indicator",
+            "pointerColor": "black",
+            "pointerLength": "100%",
+            "pointerOffset": 5,
+            "pointerStyle": "default",
+            "pointerWidthRatio": 0.2,
+            "progressBar": true,
+            "progressBarColor": "#119d11",
+            "progressBarRoundCap": false,
+            "progressBarWidthRatio": 0.3333,
+            "radius": "85%",
+            "showDetail": true,
+            "showMarkPoint": false,
+            "showPointer": true,
+            "splitLineColor": "#fff",
+            "splitLineDistanceRatio": -1,
+            "splitLineLengthRatio": 1,
+            "splitLineWidth": 2,
+            "splitNumber": 4,
+            "startAngle": 240,
+            "tickShow": false,
+            "unitColor": "black",
+            "unitFontMax": 40,
+            "unitFontMin": 10,
+            "unitFontRatio": 0.045,
+            "unitFontSize": 18
+          },
+          "gaugePresetId": "progress-indicator",
+          "selectedPresetId": "progress-indicator"
+        },
+        "id": "9a328918-5a84-43a8-95d6-47c117d4b9a6",
+        "title": "Power (W)"
+      },
+      "a970b019-59bb-4750-ab2e-614e03c3b1ff": {
+        "_height": 4,
+        "_width": 5,
+        "_x": 0,
+        "_y": 0,
+        "classes": {
+          "alerts-overlay": false,
+          "card": true,
+          "card-dashboard": true,
+          "kpi-radial-gauge": true,
+          "panel-title-regular": true
+        },
+        "componentId": "KPI Radial Gauge",
+        "config": {
+          "datapoints": [],
+          "datapointsGauge": [
+            {
+              "__active": true,
+              "__target": {
+                "c8y_IsDevice": {},
+                "id": "###DASHBOARD_DEVICE_ID###",
+                "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+              },
+              "__template": null,
+              "color": "#20c820",
+              "fragment": "flow",
+              "label": "flow → flow",
+              "lineType": "line",
+              "max": 10,
+              "min": 0,
+              "redRangeMax": 5,
+              "redRangeMin": 0,
+              "renderType": "min",
+              "series": "flow",
+              "unit": "l/m",
+              "yAxisType": null,
+              "yellowRangeMax": 8,
+              "yellowRangeMin": 5
+            }
+          ],
+          "datapointsLabels": [],
+          "fractionSize": 2,
+          "gaugeOptions": {
+            "anchor": {
+              "itemStyle": {
+                "borderWidth": 10
+              },
+              "show": true,
+              "showAbove": true,
+              "sizeRatio": 0.1
+            },
+            "axisLabelColor": "#212121",
+            "axisLabelDistanceRatio": -1,
+            "axisLabelFontSizeMax": 32,
+            "axisLabelFontSizeMin": 7,
+            "axisLabelFontSizeRatio": 0.04,
+            "axisLineWidthRatio": 0.075,
+            "dateColor": "black",
+            "dateFontMax": 16,
+            "dateFontMin": 10,
+            "dateFontRatio": 0.03,
+            "detailOffsetCenter": [
+              "0%",
+              "35%"
+            ],
+            "endAngle": 300,
+            "id": "progress-indicator",
+            "measurementValueColor": "black",
+            "measurementValueFontMax": 56,
+            "measurementValueFontMin": 12,
+            "measurementValueFontRatio": 0.08,
+            "name": "Progress indicator",
+            "pointerColor": "black",
+            "pointerLength": "100%",
+            "pointerOffset": 5,
+            "pointerStyle": "default",
+            "pointerWidthRatio": 0.2,
+            "progressBar": true,
+            "progressBarColor": "#119d11",
+            "progressBarRoundCap": false,
+            "progressBarWidthRatio": 0.3333,
+            "radius": "85%",
+            "showDetail": true,
+            "showMarkPoint": false,
+            "showPointer": true,
+            "splitLineColor": "#fff",
+            "splitLineDistanceRatio": -1,
+            "splitLineLengthRatio": 1,
+            "splitLineWidth": 2,
+            "splitNumber": 4,
+            "startAngle": 240,
+            "tickShow": false,
+            "unitColor": "black",
+            "unitFontMax": 40,
+            "unitFontMin": 10,
+            "unitFontRatio": 0.045,
+            "unitFontSize": 18
+          },
+          "gaugePresetId": "progress-indicator",
+          "selectedPresetId": "progress-indicator"
+        },
+        "id": "a970b019-59bb-4750-ab2e-614e03c3b1ff",
+        "title": "Flow (l/m)"
+      },
+      "b5fdb803-28d1-4667-9e4a-e7d7fa0cecc4": {
+        "_height": 6,
+        "_width": 6,
+        "_x": 18,
+        "_y": 4,
+        "classes": {
+          "alarm-list": true,
+          "alerts-overlay": false,
+          "card": true,
+          "card-dashboard": true,
+          "panel-title-regular": true
+        },
+        "componentId": "Alarm list",
+        "config": {
+          "dateFilter": [
+            "1970-01-01T00:00:00.000Z",
+            "2025-10-07T14:07:43.806Z"
+          ],
+          "device": {
+            "id": "###DASHBOARD_DEVICE_ID###",
+            "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+          },
+          "displayDateSelection": false,
+          "displaySettings": {
+            "globalAutoRefreshContext": true,
+            "globalTimeContext": true
+          },
+          "interval": "none",
+          "isAutoRefreshEnabled": true,
+          "isRealtime": false,
+          "order": "BY_ACTIVE",
+          "refreshInterval": 5000,
+          "refreshOption": "interval",
+          "severities": {
+            "CRITICAL": true,
+            "MAJOR": true,
+            "MINOR": true,
+            "WARNING": true
+          },
+          "showAlarmsForChildren": true,
+          "status": {
+            "ACKNOWLEDGED": true,
+            "ACTIVE": true,
+            "CLEARED": false
+          },
+          "types": [
+            ""
+          ],
+          "widgetInstanceGlobalAutoRefreshContext": false,
+          "widgetInstanceGlobalTimeContext": false
+        },
+        "id": "b5fdb803-28d1-4667-9e4a-e7d7fa0cecc4",
+        "title": "Alarm list"
+      },
+      "dbbb1fcf-37be-49f2-8799-e30137510e19": {
+        "_height": 2,
+        "_width": 4,
+        "_x": 20,
+        "_y": 2,
+        "classes": {
+          "alerts-overlay": false,
+          "card": true,
+          "card-dashboard": true,
+          "kpi-widget": true,
+          "panel-title-regular": true
+        },
+        "componentId": "kpi.widget",
+        "config": {
+          "datapoints": [
+            {
+              "__active": true,
+              "__target": {
+                "id": "###DASHBOARD_DEVICE_ID###",
+                "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+              },
+              "__template": null,
+              "color": "#505555",
+              "fragment": "operatingLevel",
+              "label": "operatingLevel → operatingLevel",
+              "lineType": "line",
+              "renderType": "min",
+              "series": "operatingLevel",
+              "unit": "%",
+              "yAxisType": null
+            }
+          ],
+          "fontSize": 36,
+          "icon": "level-up",
+          "numberOfDecimalPlaces": 0,
+          "showIcon": true,
+          "showTimestamp": true,
+          "showTrend": true
+        },
+        "id": "dbbb1fcf-37be-49f2-8799-e30137510e19",
+        "title": "Op Level"
+      },
+      "e2a4d056-faf3-4e93-9dab-050390cfad85": {
+        "_height": 2,
+        "_width": 4,
+        "_x": 20,
+        "_y": 0,
+        "classes": {
+          "alerts-overlay": false,
+          "card": true,
+          "card-dashboard": true,
+          "kpi-widget": true,
+          "panel-title-regular": true
+        },
+        "componentId": "kpi.widget",
+        "config": {
+          "datapoints": [
+            {
+              "__active": true,
+              "__target": {
+                "id": "###DASHBOARD_DEVICE_ID###",
+                "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+              },
+              "__template": null,
+              "color": "#2d16b8",
+              "fragment": "bearingTemperature",
+              "label": "bearingTemperature → bearingTemperature",
+              "lineType": "line",
+              "renderType": "min",
+              "series": "bearingTemperature",
+              "unit": "C",
+              "yAxisType": null
+            }
+          ],
+          "fontSize": 36,
+          "icon": "water",
+          "numberOfDecimalPlaces": 0,
+          "showIcon": true,
+          "showTimestamp": true,
+          "showTrend": true
+        },
+        "id": "e2a4d056-faf3-4e93-9dab-050390cfad85",
+        "title": "Bearing Temp"
+      },
+      "e89ed21b-2248-4c2c-a129-688f1da47af0": {
+        "_height": 2,
+        "_width": 4,
+        "_x": 16,
+        "_y": 0,
+        "classes": {
+          "alerts-overlay": false,
+          "card": true,
+          "card-dashboard": true,
+          "kpi-widget": true,
+          "panel-title-regular": true
+        },
+        "componentId": "kpi.widget",
+        "config": {
+          "datapoints": [
+            {
+              "__active": true,
+              "__target": {
+                "id": "###DASHBOARD_DEVICE_ID###",
+                "name": "Pump01 (nsu=http://opcfoundation.org/UA/;i=84)"
+              },
+              "__template": null,
+              "color": "#c3ca96",
+              "fragment": "inflowTemperature",
+              "label": "inflowTemperature → inflowTemperature",
+              "lineType": "line",
+              "renderType": "min",
+              "series": "inflowTemperature",
+              "unit": "C",
+              "yAxisType": null
+            }
+          ],
+          "fontSize": 36,
+          "icon": "temperature",
+          "numberOfDecimalPlaces": 0,
+          "showIcon": true,
+          "showTimestamp": true,
+          "showTrend": true
+        },
+        "id": "e89ed21b-2248-4c2c-a129-688f1da47af0",
+        "title": "Inflow Temp"
+      }
+    },
+    "classes": {
+      "dashboard-theme-light": true
+    },
+    "columns": 24,
+    "created": "2025-10-07T14:07:46.352Z",
+    "description": null,
+    "deviceType": false,
+    "deviceTypeValue": "c8y_OpcuaPump",
+    "globalRolesIds": null,
+    "historyDescription": {
+      "changeType": "update",
+      "widgetChanges": {
+        "arrangement": [
+          "SCADA",
+          "Alarm list",
+          "Pump State"
+        ],
+        "removed": [
+          "SCADA"
+        ]
+      }
+    },
+    "icon": "th",
+    "name": "Pump Dashboard",
+    "priority": 5000,
+    "translateWidgetTitle": false,
+    "widgetClasses": {
+      "panel-title-regular": true
+    },
+    "widgetMargin": 12
+  }
+}

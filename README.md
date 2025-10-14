@@ -8,6 +8,7 @@ This demo showcases:
 * Deloy a device portocol to ready metrics form the pump
 * Deploy a dashboard to display pump metrics 
 
+
 ## Start ThinEdge Demo Container
 
 * Install the cumulocity cli like documented [here](https://goc8ycli.netlify.app/docs/installation/)
@@ -27,8 +28,8 @@ c8y tedge demo start ThinEdge-cooling-line3
 ```
 * This will start the container and automatically register the device in your tenant. You can check this in your tenant under "Devices". The device will be created as a "ThinEdge" device type and name ThinEdge-cooling-line3.
 The demo container is running a docker host (podman) on its own. You can use it to deploy the opc-ua server and the gateway.
-## Deploy the opc-ua server and opc-ua-device-gateway
 
+## Deploy the opc-ua server and opc-ua-device-gateway
 * You have to deploy both docker-compose files to software management in your tenant. The type of the software to deploy must be container-group.
 *  You can find both under [software](./software).
 *  You can deploy the software using the web interface or c8y cli or like:
@@ -36,19 +37,35 @@ The demo container is running a docker host (podman) on its own. You can use it 
 
 ### Deploy the opc-ua-demo-server
 ```bash
-c8y software create --name opc-ua-server --softwareType container-group --description "OPC-UA Demo Server to simulate an industrial pump" | c8y software versions create --version 0.0.1 --url https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-opc-ua-demo-server.yml
+c8y software create --name opc-ua-server \
+--softwareType container-group \
+--description "OPC-UA Demo Server to simulate an industrial pump" | \
+c8y software versions create --version 0.0.1 \
+--url https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-opc-ua-demo-server.yml
 ```
 Please keep in mind that this docker compose uses host.containers.internal which is supported by podman which is running inside the demo container. If you want to run this on a different docker host you might need to adjust the compose file. e.g. use host.docker.internal for docker desktop on windows or mac.
 
 ### Deploy the opc-ua-device-gateway
 ```bash
-c8y software create --name opc-ua-device-gateway --softwareType container-group --description "Cumulocity OPC-UA Device Gateway" | c8y software versions create --version 0.0.1 --url https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-opcua-device-gateway.yaml
+c8y software create \
+--name opc-ua-device-gateway \
+--softwareType container-group \
+--description "Cumulocity OPC-UA Device Gateway" | \
+c8y software versions create \
+--version 0.0.1 \
+--url https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-opcua-device-gateway.yaml
 ```
 * Now you can install both software packages on your device ThinEdge-cooling-line3 via software management in the web interface (great to demo) or like:
 ```bash
-c8y software versions install --device ThinEdge-cooling-line3 --software opc-ua-server --version 0.0.1
+c8y software versions install \
+--device ThinEdge-cooling-line3 \
+--software opc-ua-server \
+--version 0.0.1
 
-c8y software versions install --device ThinEdge-cooling-line3 --software opc-ua-device-gateway --version 0.0.1  
+c8y software versions install \
+--device ThinEdge-cooling-line3 \
+--software opc-ua-device-gateway \
+--version 0.0.1
 ```
 * After a short while both containers should be running in the demo container. The now running opc-ua-device-gateway will automatically create a childDevice under ThinEdge-cooling-line3 with the name OPCUAGateway. .
 
@@ -56,6 +73,7 @@ c8y software versions install --device ThinEdge-cooling-line3 --software opc-ua-
 * Configure a new OPC UA Server in the OPCUAGateway child device using the web UI like:
 
 ![Configure OPC UA Server](images/configure_opc_server.png)
+* Name the server OPC-UA Server Cooling Line 3
 * Server URL: opc.tcp://opcserver:4840  is the container name of the opc-ua-demo-server in the docker-compose file. Since both containers are running in the same podman instance inside the demo container they can reach each other via container name.
 * Security Policy: None
 * Security Mode: None
@@ -64,15 +82,46 @@ c8y software versions install --device ThinEdge-cooling-line3 --software opc-ua-
 
 * After saving the server configuration a new child device with the name OPC-UA Server Cooling Line 3 should appear under device OPCUAGateway
 * To check if the connection to the server was successful you can check whether there is a new operation under control tab which says "[AUTO] Address space import from Root node"
-* After the address scan is finised you should see an entry under Address Space. You can now browse the namespace of the opc-ua-demo-server.
+* After the address scan is finished you should see an entry under Address Space. You can now browse the namespace of the opc-ua-demo-server.
 ![OPC UA Namespace](images/address_space.png)
 
 ### Create a device protocol to read pump metrics
-* To read metrics from the opc-ua-demo-server we need to create a device protocol. You could create a protocol from scratch using the web UI under Device types -> Device protocols but for this demo we provide a preconfigured protocol which you can directly import.
+* To read metrics from the opc-ua-demo-server we need to create a device protocol. You could create a protocol from scratch using the web UI under Device types -> Device protocols but for this demo we provide a pre-configured protocol which you can directly import.
 
-* You can find the protocol file [here](./device-protocols/opc-ua-pump-device-protocol.json) it can be imported using the cli like:
+* You can find the protocol file [here](./device-protocols/opc-ua-pump-device-protocol.json) it can also be imported using the cli like:
 
+```bash
+c8y inventory create \
+--name "Pump01" \
+--type c8y_OpcuaDeviceType \
+--data ./device-protocols/opc-ua-pump-device-protocol.json
+```
 
+* After importing the protocol a new device with the name Pump01 should appear in your inventory. It is automatically assigned to the OPCUAGateway device as a child device.
+* After import the device protocol looks like this:
+![Device Protocol](./images/device_protocol.png)
+* You should now be able to see the pump measurements in the device management application under the Pump01.
+
+## Deploy a dashboard to display pump metrics
+* To visualize the pump metrics we provide a pre-configured dashboard. It can be imported using the UI by creating a new dashboard in Cockpit or using the cli like:
+```bash
+### Get the device id of the Pump01 device
+deviceId=$(c8y inventory list \
+--type c8y_OpcuaDevice \
+--owner device_ThinEdge-cooling-line3 | \
+jq -r .id)
+
+### Import the dashboard and replace the placeholder ###DASHBOARD_DEVICE_ID### with the actual device id of Pump01
+sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" ./dashboard/dashboardPumpMO.json | \
+c8y inventory children create \
+--id $deviceId \
+--global \
+--childType addition \
+--template input.value
+```
+
+After importing open Cockpit Application assign the Pump device to a group, open the device. The dashboard you can find named "Pump Dashboard". It should look like this: 
+![Pump Dashboard](./images/pump_dashboard.png)
 
 
 

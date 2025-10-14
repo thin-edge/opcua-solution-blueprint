@@ -648,24 +648,10 @@
     "dashboard-theme-light": true
   },
   "columns": 24,
-  "created": "2025-10-07T14:07:46.352Z",
   "description": null,
   "deviceType": false,
-  "deviceTypeValue": "c8y_OpcuaPump",
+  "deviceTypeValue": "c8y_OpcuaDevice",
   "globalRolesIds": null,
-  "historyDescription": {
-    "changeType": "update",
-    "widgetChanges": {
-      "arrangement": [
-        "SCADA",
-        "Alarm list",
-        "Pump State"
-      ],
-      "removed": [
-        "SCADA"
-      ]
-    }
-  },
   "icon": "th",
   "name": "Dashboard",
   "priority": 5000,
@@ -675,3 +661,4 @@
   },
   "widgetMargin": 12
 }
+
