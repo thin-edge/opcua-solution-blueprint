@@ -73,8 +73,8 @@ c8y software versions install \
 * Configure a new OPC UA Server in the OPCUAGateway child device using the web UI like:
 
 ![Configure OPC UA Server](images/configure_opc_server.png)
-* Name the server OPC-UA Server Cooling Line 3
-* Server URL: opc.tcp://opcserver:4840  is the container name of the opc-ua-demo-server in the docker-compose file. Since both containers are running in the same podman instance inside the demo container they can reach each other via container name.
+* Name the server `OPC-UA Server Cooling Line 3`
+* Server URL: `opc.tcp://opcserver:4840`  is the container name of the opc-ua-demo-server in the docker-compose file. Since both containers are running in the same podman instance inside the demo container they can reach each other via container name.
 * Security Policy: None
 * Security Mode: None
 
