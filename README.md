@@ -109,12 +109,10 @@ deviceId=$(c8y inventory list \
 jq -r .id)
 
 ### Import the dashboard and replace the placeholder ###DASHBOARD_DEVICE_ID### with the actual device id of Pump01
-sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" ./dashboard/dashboardPumpMO.json | \
-c8y inventory children create \
---id $deviceId \
---global \
---childType addition \
---template input.value
+
+wget https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/dashboard/dashboardPumpMO.json -O - |\
+sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" | \
+c8y inventory children create --id $deviceId --global --childType addition --template input.value
 ```
 
 After importing open Cockpit Application assign the Pump device to a group, open the device. The dashboard you can find named "Pump Dashboard". It should look like this: 
