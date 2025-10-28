@@ -28,4 +28,4 @@ volumes:
 
 networks:
   backend:
-    name: backend
+    name: opc-ua-gateway_backend

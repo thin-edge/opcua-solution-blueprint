@@ -1,0 +1,40 @@
+name: tedge-container-bundle
+### This docker-compose file runs the thinEdge.io container bundle
+### For more information about the container bundle visit:https://github.com/thin-edge/tedge-container-bundle
+### 
+services:
+    tedge-container-bundle:
+        container_name: tedge-container-bundle
+        restart: always
+        extra_hosts:
+            - host.docker.internal:host-gateway
+        networks:
+            - tedge
+        ports:
+            - 127.0.0.1:1884:1883
+            - 127.0.0.1:9000:8000
+            - 127.0.0.1:9001:8001
+        volumes:
+            - device-certs:/etc/tedge/device-certs
+            - tedge:/data/tedge
+            - /var/run/docker.sock:/var/run/docker.sock:rw
+        environment:
+            - TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always
+              ##### Adjust TEDGE_C8Y_URL environment variables according to your Cumulocity tenant
+            - TEDGE_C8Y_URL=example.eu-latest.cumulocity.com
+            - CA=c8y
+            - DEVICE_ID=tedge-container-bundle
+            - DEVICE_ONE_TIME_PASSWORD=${DEVICE_ONE_TIME_PASSWORD}
+        pull_policy: always
+        image: ghcr.io/thin-edge/tedge-container-bundle:latest
+networks:
+    tedge:
+        external: true
+        name: tedge
+volumes:
+    device-certs:
+        external: true
+        name: device-certs
+    tedge:
+        external: true
+        name: tedge
