@@ -1,0 +1,31 @@
+services:
+  gateway:
+    # Image is maintained under: https://github.com/thin-edge/opcua-device-gateway-container
+    image: ghcr.io/thin-edge/opcua-device-gateway:latest
+    container_name: opc-device-gateway
+    restart: always
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    environment:
+    # Use configuration from https://cumulocity.com/docs/device-integration/opcua/#gateway-configuration-and-registration
+      - GATEWAY_IDENTIFIER=OPCUAGateway
+      - GATEWAY_NAME=OPCUAGateway
+      - GATEWAY_THINEDGE_MQTTSERVERURL=tcp://host.docker.internal:1883
+      - GATEWAY_THINEDGE_USEFORDATAFORWARDING=true
+      - GATEWAY_THINEDGE_ENABLED=true
+      - GATEWAY_MAPPINGS_MERGECYCLICREAD=false
+      - GATEWAY_MONITORING_INTERVAL=3600000
+    volumes:
+      - opcua_data:/app/data
+      # Provide access to thin-edge.io configuration
+      - /etc/tedge:/etc/tedge
+      - /etc/tedge/device-certs:/etc/tedge/device-certs
+    networks:
+      - backend
+
+volumes:
+  opcua_data:
+
+networks:
+  backend:
+    name: backend
