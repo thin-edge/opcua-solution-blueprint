@@ -1,6 +1,6 @@
-# OPC-UA Demo Solution
-- [OPC-UA Demo Solution](#opc-ua-demo-solution)
-  - [OPC-UA Solution using ThinEdge Demo Container](#opc-ua-solution-using-thinedge-demo-container)
+# OPC-UA Solution Blueprint
+- [OPC-UA Solution Blueprint](#opc-ua-solution-blueprint)
+  - [OPC-UA Demo using the ThinEdge Demo Container](#opc-ua-demo-using-the-thinedge-demo-container)
     - [Start ThinEdge Demo Container](#start-thinedge-demo-container)
     - [Deploy the opcua-server and opcua-device-gateway](#deploy-the-opcua-server-and-opcua-device-gateway)
     - [Deploy the opcua-demo-server](#deploy-the-opcua-demo-server)
@@ -18,11 +18,11 @@
       - [Deploy the  opcua-device-gateway with the ThinEdge Container Bundle](#deploy-the--opcua-device-gateway-with-the-thinedge-container-bundle)
 
 
-This repo should help you to quickly setup a demo to showcase a demo for Cumulocity using ThinEdge, the opcua-device-gateway and an OPC-UA server simulating an industrial pump. In addition it will showcase  examples of production like deployments of thinEdge and the opcua-device-gateway.
+This repo should help you to quickly set up various deployment scenarios of the OPC-UA Device Gateway in combination with ThinEdge.io. It includes a demo simulating an industrial pump using ThinEdge, the OPC-UA Device Gateway, and an OPC-UA Simulation Server. In addition, it showcases examples of production-like deployments.
 
-## OPC-UA Solution using ThinEdge Demo Container
+## OPC-UA Demo using the ThinEdge Demo Container
 
-The ThinEdge demo container is a great way to quickly setup a demo environment for Cumulocity. It comes with a pre-installed thin-edge.io installation and podman as docker host. This allows you to easily deploy the opcua-device-gateway and an opcua server simulating an industrial pump.
+The ThinEdge demo container is a great way to quickly setup a demo environment for Cumulocity. It simulates a real linux device by spawning a systemd base container. It comes with  pre-installed thin-edge.io installation and podman as docker host. This allows you to easily deploy the OPC-UA Device Gateway and an [OPC-UA Simulation Server](https://github.com/thin-edge/opc-ua-demo-server) simulating an industrial pump.
 
 ### Start ThinEdge Demo Container
 
@@ -35,12 +35,12 @@ You need some kind of docker installation to run the demo container. Please inst
 Create a new session for the cli and provide necessary credentials etc.:
 ```bash
 c8y session create <session-name>
-````
+```
 * Activate the session (choose the session name you created beforehand):
 ```bash
 set-session 
 ```
-* Start the demo container and give it a name (e.g. ThinEdge-cooling-line3)::
+* Start the demo container and give it a name (e.g. ThinEdge-cooling-line3):
 ```bash
 c8y tedge demo start ThinEdge-cooling-line3
 ```
@@ -50,7 +50,7 @@ The demo container is running a docker host (podman) on its own. You can use it 
 ### Deploy the opcua-server and opcua-device-gateway
 You have to deploy both docker-compose files to software management in your tenant. The type of the software to deploy must be container-group.
 
-You can find both under [software](./software).
+You can find both under [software](https://github.com/thin-edge/opcua-solution-blueprint/tree/main/software).
 
 You can deploy the software using the web interface or c8y cli or like:
   
@@ -61,7 +61,7 @@ c8y software create --name opcua-server \
 --softwareType container-group \
 --description "OPC-UA Demo Server to simulate an industrial pump" | \
 c8y software versions create --version 0.0.1 \
---url https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-opcua-demo-server.yml
+--url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-demo-server.yml
 ```
 Please keep in mind that this docker compose uses host.containers.internal which is supported by podman which is running inside the demo container. If you want to run this on a different docker host you might need to adjust the compose file. e.g. use host.docker.internal for docker desktop on windows or mac.
 
@@ -73,7 +73,7 @@ c8y software create \
 --description "Cumulocity OPC-UA Device Gateway" | \
 c8y software versions create \
 --version demo-container \
---url https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-opcua-device-gateway-demo-container.yml
+--url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-device-gateway-demo-container.yml
 ```
 Now you can install both software packages on your device ThinEdge-cooling-line3 via software management in the web interface (great to demo) or like:
 ```bash
@@ -113,7 +113,7 @@ To read metrics from the opc-ua-demo-server we need to create a device protocol.
 You can find the protocol file [here](./device-protocols/opcua-pump-device-protocol.json) it can also be imported using the cli like:
 
 ```bash
-wget https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - | c8y inventory create --name "Pump01" --type c8y_OpcuaDeviceType --template input.value
+wget https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - | c8y inventory create --name "Pump01" --type c8y_OpcuaDeviceType --template input.value
 ```
 
 After importing the protocol a new device with the name Pump01 should appear in your inventory. It is automatically assigned to the OPCUAGateway device as a child device.
@@ -133,7 +133,7 @@ jq -r .id)
 
 ### Import the dashboard and replace the placeholder ###DASHBOARD_DEVICE_ID### with the actual device id of Pump01
 
-wget https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/dashboard/dashboardPumpMO.json -O - |\
+wget https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/dashboard/dashboardPumpMO.json -O - |\
 sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" | \
 c8y inventory children create --id $deviceId --global --childType addition --template input.value
 ```
@@ -146,7 +146,7 @@ To remove the demo container and all its data you can execute:
 ```bash
 c8y tedge demo stop ThinEdge-cooling-line3 
 ```
-this will remove the demo container and all its data and also unregister the device from your tenant. You can add  --keep to keep the device and user in cumulocity.
+this will remove the demo container and all its data and also unregister the device from your tenant. You can add --keep to keep the device and user in cumulocity.
 
 
 ## Production like deployment examples
@@ -171,7 +171,7 @@ sudo tedge connect c8y
 
 #### Deploy the  opc-ua-device-gateway
 
-You can deploy the opcua-device-gateway container on the native docker host using the [docker-compose-opcua-device-gateway-tedge-native.yml](https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-opcua-device-gateway-tedge-native.yml).
+You can deploy the opcua-device-gateway container on the native docker host using the [docker-compose-opcua-device-gateway-tedge-native.yml](https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-device-gateway-tedge-native.yml).
 
 ```bash
 c8y software create \
@@ -180,13 +180,13 @@ c8y software create \
 --description "Cumulocity OPC-UA Device Gateway" | \
 c8y software versions create \
 --version native \
---url https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-opcua-device-gateway-tedge-native.yml
+--url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-device-gateway-tedge-native.yml
 ```
 
 If you have already a software this command might fail. Then you just have to create a new version of the existing software. You can also upload the compose file via the web interface as a new version or use the cli to create a new version like:
 
 ```bash
-c8y software get --id opcua-device-gateway | c8y software versions create --version native --url https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-opcua-device-gateway-tedge-native.yml
+c8y software get --id opcua-device-gateway | c8y software versions create --version native --url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-device-gateway-tedge-native.yml
 ```
 
 
@@ -218,9 +218,9 @@ The one time password you enter must be exported as an environment variable like
 export DEVICE_ONE_TIME_PASSWORD=<your-one-time-password>
 ```
 
-Download the [docker-compose-tedge-container-bundle](https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-tedge-container-bundle.yml) file from this repo and  place it on your docker host.
+Download the [docker-compose-tedge-container-bundle](https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-tedge-container-bundle.yml) file from this repo and  place it on your docker host.
 ```bash
-wget https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-tedge-container-bundle.yml
+wget https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-tedge-container-bundle.yml
 ```
 
 Adjust the environment variables in the compose file according to your setup (DEVICE_ID, TEDGE_C8Y_URL, ...) and execute:
@@ -231,7 +231,7 @@ docker compose -f ./docker-compose-tedge-container-bundle.yml up -d
 
 Using the the opcua-device-gateway-container with the ThinEdge Container Bundle has one caveat. You must also configure the environment variable TEDGE_C8Y_URL (<your-tenant>.cumulocity.com. !!! without https://) in the docker-compose file to point to your Cumulocity tenant. Hence it cannot run as a generic container like the other examples. This will change in the next release of the opcua-device-gateway.
 
-Find an example docker compose to run the opcua-device-gateway with the container-bundle in this repo under software [docker-compose-opcua-device-gateway-container-bundle.yml](https://raw.githubusercontent.com/thin-edge/opcua-solution-demo/refs/heads/main/software/docker-compose-opcua-device-gateway-container-bundle.yml)
+Find an example docker compose to run the opcua-device-gateway with the container-bundle in this repo under software [docker-compose-opcua-device-gateway-container-bundle.yml](https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-device-gateway-container-bundle.yml)
 
 You can deploy it via software management like in the examples above but you need to make sure that the C8Y_BASEURL (https://<your-tenant>.cumulocity.com) environment variable is set correctly in the docker-compose file.
 
