@@ -2,7 +2,7 @@
 services:
   gateway:
     # Image is maintained under: https://github.com/thin-edge/opcua-device-gateway-container
-    image: ghcr.io/thin-edge/opcua-device-gateway:20250801.0929
+    image: ghcr.io/thin-edge/opcua-device-gateway:latest
     container_name: opc-device-gateway
     restart: always
     environment:
