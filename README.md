@@ -11,6 +11,7 @@
     - [Create a device protocol to read pump metrics](#create-a-device-protocol-to-read-pump-metrics)
     - [Deploy a dashboard to display pump metrics](#deploy-a-dashboard-to-display-pump-metrics)
     - [Remove demo container](#remove-demo-container)
+    - [Using the startOPCDemoContainer.sh script](#using-the-startopcdemocontainersh-script)
   - [Production like deployment examples](#production-like-deployment-examples)
     - [ThinEdge Native on linux host with docker](#thinedge-native-on-linux-host-with-docker)
       - [Adjust thinEdge.io configuration to let containers access the mqtt broker](#adjust-thinedgeio-configuration-to-let-containers-access-the-mqtt-broker)
@@ -77,6 +78,8 @@ Please keep in mind that this docker compose uses host.containers.internal which
 
 ### Deploy the opcua-device-gateway
 
+Only deploy if not already installed
+
 ```bash
 c8y software create \
 --name opcua-device-gateway \
@@ -88,6 +91,7 @@ c8y software versions create \
 ```
 
 Now you can install both software packages on your device ThinEdge-cooling-line3 via software management in the web interface (great to demo) or like:
+Only deploy if not already installed
 
 ```bash
 c8y software versions install \
@@ -169,7 +173,25 @@ To remove the demo container and all its data you can execute:
 c8y tedge demo stop ThinEdge-cooling-line3
 ```
 
-this will remove the demo container and all its data and also unregister the device from your tenant. You can add --keep to keep the device and user in cumulocity.
+this will remove the demo container and all its data and also unregister the device from your tenant. You can add --keep to keep the device and user in cumulocity. Please keep in mind that by that the device an all child devices will be removed from your tenant but the opc-ua address space will remain. You can remove it manually using this command:
+
+```bash
+c8y inventory find --type c8y_OpcuaNode | c8y inventory delete -f
+```
+
+### Using the startOPCDemoContainer.sh script
+
+You can also use the provided startOPCDemoContainer.sh script to start the demo container and deploy the opcua-server and opcua-device-gateway automatically. Just execute:
+
+```
+startOPCDemoContainer.sh
+```
+
+the script will use "ThinEdge-cooling-line3" as device name by default. You can change it by providing a parameter like:
+
+```
+startOPCDemoContainer.sh <Your-Device-Name>
+```
 
 ## Production like deployment examples
 

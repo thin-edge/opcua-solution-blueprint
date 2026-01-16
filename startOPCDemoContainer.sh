@@ -14,7 +14,7 @@ fi
 c8y tedge demo start $DEVICE_NAME
 
 # Create Software opcserver only if it doesn't exist
-if ! c8y software get --id opcua-server > /dev/null 2>&1; then
+if [ -z "$(c8y software find --name opcua-server 2>/dev/null)" ]; then
     echo "Creating software opcua-server..."
     c8y software create -f --name opcua-server \
     --softwareType container-group \
@@ -26,7 +26,7 @@ else
 fi
 
 # Deploy Software opc-ua gateway only if it doesn't exist
-if ! c8y software get --id opcua-device-gateway > /dev/null 2>&1; then
+if [ -z "$(c8y software find --name opcua-device-gateway 2>/dev/null)" ]; then
     echo "Creating software opcua-device-gateway..."
     c8y software create -f \
     --name opcua-device-gateway \
