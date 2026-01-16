@@ -52,10 +52,10 @@ fi
 # Wait for OPCUAGateway to exist before creating child device
 echo "Waiting for OPCUAGateway to be created..."
 while true; do
-    gateway=$(c8y inventory find --name OPCUAGateway --owner device_$DEVICE_NAME 2>/dev/null)
+    gateway=$(c8y inventory find --name OPCUAGateway --owner device_$DEVICE_NAME 2>/dev/null |  jq -r .id)
     if [ -n "$gateway" ]; then
         echo "OPCUAGateway found, creating child device..."
-        wget https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcserver.json -O -  | sed "s/###OWNER###/device_$DEVICE_NAME/g" | c8y inventory children create --id "$gateway"  --childType device --global --template input.value
+        wget https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcserver.json -O -  | sed "s/###OWNER###/device_$DEVICE_NAME/g" | c8y inventory children create -f --id "$gateway"  --childType device --global --template input.value
         break
     fi
     echo "OPCUAGateway not found yet, waiting 5 seconds..."
@@ -77,11 +77,10 @@ while [ -z "$deviceId" ]; do
         sleep 5
     else
         echo "Pump01 device found with ID: $deviceId"
+        wget https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/dashboard/dashboardPumpMO.json -O - |\
+        sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" | \
+        c8y inventory children create -f --id $deviceId --global --childType addition --template input.value
     fi
 done
 
 # Import the dashboard and replace the placeholder ###DASHBOARD_DEVICE_ID### with the actual device id of Pump01
-
-wget https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/dashboard/dashboardPumpMO.json -O - |\
-sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" | \
-c8y inventory children create -f --id $deviceId --global --childType addition --template input.value
