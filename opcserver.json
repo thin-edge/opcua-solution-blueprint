@@ -1,0 +1,40 @@
+{
+    "c8y_IsDevice": {},
+    "c8y_RequiredAvailability": {
+        "responseInterval": 5
+    },
+    "c8y_ua_ClientConfig": {
+        "alarmSeverityMappings": null,
+        "alarmStatusMappings": null,
+        "autoReconnect": true,
+        "autoScanAddressSpace": true,
+        "certificatePass": null,
+        "cyclicReadBulkSize": 1000,
+        "keystoreBinaryId": null,
+        "keystorePass": null,
+        "maxResponseMessageSize": 50000000,
+        "partialAddressScan": false,
+        "partialAddressScanNodeIds": [],
+        "passwordEncrypted": false,
+        "rescanCron": null,
+        "securityMode": "NONE",
+        "serverUrl": "opc.tcp://opcserver:4840",
+        "statusCheckInterval": 40,
+        "subscribeModelChangeEvent": false,
+        "targetConnectionState": "enabled",
+        "targetUpdateState": false,
+        "timeout": 30,
+        "userIdentityMode": "Anonymous",
+        "userName": "",
+        "userPassword": "",
+        "validateDiscoveredEndpoints": null
+    },
+    "c8y_ua_NamespaceTable": [
+        "http://opcfoundation.org/UA/",
+        "urn:freeopcua:python:server",
+        "http://www.cumulocity.com"
+    ],
+    "name": "opcserver",
+    "owner": "###OWNER###",
+    "type": "c8y_OpcuaServer"
+}
