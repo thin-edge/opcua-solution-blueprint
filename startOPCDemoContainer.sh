@@ -13,21 +13,31 @@ fi
 # Start Demo Container
 c8y tedge demo start $DEVICE_NAME
 
-# Create Software opcserver
-c8y software create -f --name opcua-server \
---softwareType container-group \
---description "OPC-UA Demo Server to simulate an industrial pump" | \
-c8y software versions create -f --version 0.0.1 \
---url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-demo-server.yml
+# Create Software opcserver only if it doesn't exist
+if ! c8y software get --id opcua-server > /dev/null 2>&1; then
+    echo "Creating software opcua-server..."
+    c8y software create -f --name opcua-server \
+    --softwareType container-group \
+    --description "OPC-UA Demo Server to simulate an industrial pump" | \
+    c8y software versions create -f --version 0.0.1 \
+    --url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-demo-server.yml
+else
+    echo "Software opcua-server already exists, skipping creation."
+fi
 
-# Deploy Software opc-ua gateway
-c8y software create -f \
---name opcua-device-gateway \
---softwareType container-group \
---description "Cumulocity OPC-UA Device Gateway" | \
-c8y software versions create -f \
---version demo-container \
---url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-device-gateway-demo-container.yml
+# Deploy Software opc-ua gateway only if it doesn't exist
+if ! c8y software get --id opcua-device-gateway > /dev/null 2>&1; then
+    echo "Creating software opcua-device-gateway..."
+    c8y software create -f \
+    --name opcua-device-gateway \
+    --softwareType container-group \
+    --description "Cumulocity OPC-UA Device Gateway" | \
+    c8y software versions create -f \
+    --version demo-container \
+    --url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-device-gateway-demo-container.yml
+else
+    echo "Software opcua-device-gateway already exists, skipping creation."
+fi
 
 sleep 2
 # Install software on device
