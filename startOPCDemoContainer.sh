@@ -62,9 +62,6 @@ while true; do
     sleep 5
 done
 
-# wait for opcserver to be configured
-read -p "Please configure the opcserver and wait until the child device is created. Press enter to continue"
-
 # Wait for Pump01 device to be created
 echo "Waiting for Pump01 device to be created..."
 deviceId=""
