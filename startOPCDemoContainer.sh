@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Set device name from command line argument or use default
 DEVICE_NAME="${1:-ThinEdge-cooling-line3}"
@@ -52,7 +52,8 @@ c8y software versions install -f \
 --version demo-container
 
 # Install device protocol only if it doesn't exist
-if ! c8y inventory find --name "Pump01" --type c8y_OpcuaDeviceType > /dev/null 2>&1; then
+pump_result=$(c8y inventory find --name "Pump01" --type c8y_OpcuaDeviceType 2>/dev/null)
+if [ -z "$pump_result" ]; then
     echo "Creating device type Pump01..."
     wget https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - | c8y inventory create -f --name "Pump01" --type c8y_OpcuaDeviceType --template input.value
 else
