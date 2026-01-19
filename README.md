@@ -184,13 +184,13 @@ c8y inventory find --type c8y_OpcuaNode | c8y inventory delete -f
 You can also use the provided startOPCDemoContainer.sh script to start the demo container and deploy the opcua-server and opcua-device-gateway automatically. Just execute:
 
 ```
-startOPCDemoContainer.sh
+sh <(wget -q -O - https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/startOPCDemoContainer.sh)
 ```
 
 the script will use "ThinEdge-cooling-line3" as device name by default. You can change it by providing a parameter like:
 
 ```
-startOPCDemoContainer.sh <Your-Device-Name>
+sh <(wget -q -O - https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/startOPCDemoContainer.sh) MydeviceName
 ```
 
 ## Production like deployment examples

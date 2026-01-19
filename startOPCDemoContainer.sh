@@ -55,7 +55,7 @@ c8y software versions install -f \
 pump_result=$(c8y inventory find --name "Pump01" --type c8y_OpcuaDeviceType 2>/dev/null)
 if [ -z "$pump_result" ]; then
     echo "Creating device type Pump01..."
-    wget https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - | c8y inventory create -f --name "Pump01" --type c8y_OpcuaDeviceType --template input.value
+    wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - | c8y inventory create -f --name "Pump01" --type c8y_OpcuaDeviceType --template input.value
 else
     echo "Device type Pump01 already exists, skipping creation."
 fi
@@ -66,7 +66,7 @@ while true; do
     gateway=$(c8y inventory find --name OPCUAGateway --owner device_$DEVICE_NAME 2>/dev/null |  jq -r .id)
     if [ -n "$gateway" ]; then
         echo "OPCUAGateway found, creating child device..."
-        wget https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcserver.json -O -  | sed "s/###OWNER###/device_$DEVICE_NAME/g" | c8y inventory children create -f --id "$gateway"  --childType device --global --template input.value
+        wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcserver.json -O -  | sed "s/###OWNER###/device_$DEVICE_NAME/g" | c8y inventory children create -f --id "$gateway"  --childType device --global --template input.value
         break
     fi
     echo "OPCUAGateway not found yet, waiting 5 seconds..."
@@ -88,7 +88,7 @@ while [ -z "$deviceId" ]; do
         sleep 5
     else
         echo "Pump01 device found with ID: $deviceId"
-        wget https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/dashboard/dashboardPumpMO.json -O - |\
+        wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/dashboard/dashboardPumpMO.json -O - |\
         sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" | \
         c8y inventory children create -f --id $deviceId --global --childType addition --template input.value
     fi
