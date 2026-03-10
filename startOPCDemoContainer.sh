@@ -51,14 +51,6 @@ c8y software versions install -f \
 --software opcua-device-gateway \
 --version demo-container
 
-# Install device protocol only if it doesn't exist
-pump_result=$(c8y inventory find --name "Pump01" --type c8y_OpcuaDeviceType 2>/dev/null)
-if [ -z "$pump_result" ]; then
-    echo "Creating device type Pump01..."
-    wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - | c8y inventory create -f --name "Pump01" --type c8y_OpcuaDeviceType --template input.value
-else
-    echo "Device type Pump01 already exists, skipping creation."
-fi
 
 # Wait for OPCUAGateway to exist before creating child device
 echo "Waiting for OPCUAGateway to be created..."
@@ -66,12 +58,23 @@ while true; do
     gateway=$(c8y inventory find --name OPCUAGateway --owner device_$DEVICE_NAME 2>/dev/null |  jq -r .id)
     if [ -n "$gateway" ]; then
         echo "OPCUAGateway found, creating child device..."
-        wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcserver.json -O -  | sed "s/###OWNER###/device_$DEVICE_NAME/g" | c8y inventory children create -f --id "$gateway"  --childType device --global --template input.value
+        OPCSERVER_DEVICE_ID=$(wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcserver.json -O -  | sed "s/###OWNER###/device_$DEVICE_NAME/g" | c8y inventory children create -f --id "$gateway"  --childType device --global --template input.value | jq -r .id)
+        echo "OPCSERVER created with ID: $OPCSERVER_DEVICE_ID"
+        sleep 2
         break
     fi
     echo "OPCUAGateway not found yet, waiting 5 seconds..."
     sleep 5
 done
+
+# Install device protocol only if it doesn't exist
+pump_result=$(c8y inventory find --name "Pump01" --type c8y_OpcuaDeviceType 2>/dev/null)
+if [ -z "$pump_result" ]; then
+    echo "Creating device type Pump01..."
+    wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - | sed "s/###OPCSERVER_DEVICE_ID###/$OPCSERVER_DEVICE_ID/g" | c8y inventory create -f --name "Pump01" --type c8y_OpcuaDeviceType --template input.value
+else
+    echo "Device type Pump01 already exists, skipping creation."
+fi
 
 # Wait for Pump01 device to be created
 echo "Waiting for Pump01 device to be created..."
