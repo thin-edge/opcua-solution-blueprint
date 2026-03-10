@@ -344,7 +344,7 @@
       "http://www.cumulocity.com"
     ],
     "referencedRootNodeId": "nsu=http://opcfoundation.org/UA/;i=84",
-    "referencedServerId": "952951380",
+    "referencedServerId": "###OPCSERVER_DEVICE_ID###",
     "referencedServerName": null,
     "subscriptionType": {
       "cyclicReadParameters": {
