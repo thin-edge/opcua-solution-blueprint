@@ -7,13 +7,15 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     environment:
-      # Adjust the Cumulocity base URL according to your tenant
-      - C8Y_BASEURL=https://example.eu-latest.cumulocity.com
+      # Adjust the Cumulocity base URL to point to the tedge-container-bundle container and add the port and path where the Cumulocity proxy is running (8001)
+      - C8Y_BASEURL=http://tedge-container-bundle:8001/c8y
       - GATEWAY_IDENTIFIER=OPCUAGateway
       - GATEWAY_NAME=OPCUAGateway
       - GATEWAY_THINEDGE_MQTTSERVERURL=tcp://tedge-container-bundle:1883
       - GATEWAY_THINEDGE_USEFORDATAFORWARDING=true
       - GATEWAY_THINEDGE_ENABLED=true
+      # Enable the use of the HTTP proxy for Cumulocity communication, which is required when running in thin-edge mode
+      - GATEWAY_THINEDGE_USEHTTPPROXY=true
       - GATEWAY_MAPPINGS_MERGECYCLICREAD=true
       - GATEWAY_MONITORING_INTERVAL=3600000
     volumes:

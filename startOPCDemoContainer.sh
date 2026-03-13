@@ -11,7 +11,7 @@ if [ -n "$result" ]; then
 fi
 
 # Start Demo Container
-c8y tedge demo start $DEVICE_NAME
+c8y tedge demo start $DEVICE_NAME --features nopki
 
 # Create Software opcserver only if it doesn't exist
 if [ -z "$(c8y software find --name opcua-server 2>/dev/null)" ]; then

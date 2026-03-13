@@ -50,7 +50,7 @@ set-session
 - Start the demo container and give it a name (e.g. ThinEdge-cooling-line3):
 
 ```bash
-c8y tedge demo start ThinEdge-cooling-line3
+c8y tedge demo start ThinEdge-cooling-line3 --features nopki
 ```
 
 This will start the container and automatically register the device in your tenant. You can check this in your tenant under "Devices". The device will be created as a "ThinEdge" device type and name ThinEdge-cooling-line3.
@@ -181,7 +181,7 @@ c8y inventory find --type c8y_OpcuaNode | c8y inventory delete -f
 
 ### Using the startOPCDemoContainer.sh script
 
-You can also use the provided startOPCDemoContainer.sh script to start the demo container and deploy the opcua-server and opcua-device-gateway automatically. Just execute:
+You can also use the provided startOPCDemoContainer.sh script to start the demo container and deploy the opcua-server and opcua-device-gateway automatically. Make sure to set-session for the cli and then just execute:
 
 ```
 sh <(wget -q -O - https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/startOPCDemoContainer.sh)
