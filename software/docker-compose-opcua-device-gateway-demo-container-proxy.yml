@@ -1,0 +1,45 @@
+services:
+  gateway:
+    # Image is maintained under: https://github.com/thin-edge/opcua-device-gateway-container
+    image: ghcr.io/thin-edge/opcua-device-gateway:latest
+    container_name: opc-device-gateway
+    restart: always
+    environment:
+      # Adjust the Cumulocity base URL to point to the tedge-container-bundle container and add the port and path where the Cumulocity proxy is running (8001)
+      - C8Y_BASEURL=http://host.containers.internal:8001/c8y
+      - GATEWAY_IDENTIFIER=OPCUAGateway
+      - GATEWAY_NAME=OPCUAGateway
+      # Adjust the MQTT server URL to point to the tedge-container-bundle container
+      - GATEWAY_THINEDGE_MQTTSERVERURL=tcp://host.containers.internal:1883
+      - GATEWAY_THINEDGE_USEFORDATAFORWARDING=true
+      - GATEWAY_THINEDGE_ENABLED=true
+      # Enable the use of the HTTP proxy for Cumulocity communication, which is required when running in thin-edge mode
+      - GATEWAY_THINEDGE_USEHTTPPROXY=true
+      # Enable merging of cyclic read mappings this will bach all measurements with the same cycle time into one message, which reduces the number of messages sent to Cumulocity significantly
+      - GATEWAY_MAPPINGS_MERGECYCLICREAD=true
+      - GATEWAY_MONITORING_INTERVAL=3600000
+    volumes:
+      - opcua_data:/app/data
+      # Provide access to thin-edge.io configuration
+      - tedge:/etc/tedge
+      - device-certs:/etc/tedge/device-certs
+    networks:
+      - tedge
+      - backend
+
+volumes:
+  opcua_data:
+    name: opcua_data
+  device-certs:
+    external: true
+    name: device-certs
+  tedge:
+    external: true
+    name: tedge
+
+networks:
+  tedge:
+    external: true
+    name: tedge
+  backend:
+    name: opc-ua-gateway_backend
