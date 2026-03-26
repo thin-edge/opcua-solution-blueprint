@@ -14,10 +14,22 @@ services:
       - GATEWAY_THINEDGE_MQTTSERVERURL=tcp://host.docker.internal:1883
       - GATEWAY_THINEDGE_USEFORDATAFORWARDING=true
       - GATEWAY_THINEDGE_ENABLED=true
+
       # Enable the use of the HTTP proxy for Cumulocity communication, which is required when running in thin-edge mode
       - GATEWAY_THINEDGE_USEHTTPPROXY=true
+
+      # Enables for measurements that are read in cyclic read to be batched into one measurement
       - GATEWAY_MAPPINGS_MERGECYCLICREAD=true
       - GATEWAY_MONITORING_INTERVAL=3600000
+
+      # It is crucial to set  c8y.proxy.bind=0.0.0.0 on the host otherwise the container cannot reach to local thinEdge Proxy via host.docker.internal.
+      # You can put that in /etc/tedge/tedge.toml
+      # [c8y.proxy.bind]
+      # address = "0.0.0.0"
+      # or do tedge config set c8y.proxy.bind 0.0.0.0 on the host
+
+      # In addition the outbound proxy for the thinEdge cli inside the container has to be disabled otherwise it tries to reach the local proxy over the external proxy.
+      - TEDGE_PROXY_ADDRESS=
     volumes:
       - opcua_data:/app/data
       # Provide access to thin-edge.io configuration
