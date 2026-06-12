@@ -71,7 +71,7 @@ done
 pump_result=$(c8y inventory find --name "Pump01-$DEVICE_NAME" --type c8y_OpcuaDeviceType 2>/dev/null)
 if [ -z "$pump_result" ]; then
     echo "Creating device type Pump01-$DEVICE_NAME..."
-    wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - | sed "s/###OPCSERVER_DEVICE_ID###/$OPCSERVER_DEVICE_ID/g" | c8y inventory create -f --name "Pump01-$DEVICE_NAME" --type c8y_OpcuaDeviceType --template input.value
+    wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - | sed "s/###OPCSERVER_DEVICE_ID###/$OPCSERVER_DEVICE_ID/g" | sed "s/###DEVICE_NAME###/$DEVICE_NAME/g" | c8y inventory create -f --name "Pump01-$DEVICE_NAME" --type c8y_OpcuaDeviceType --template input.value
 else
     echo "Device type Pump01-$DEVICE_NAME already exists, skipping creation."
 fi
@@ -93,6 +93,7 @@ while [ -z "$deviceId" ]; do
         echo "Pump01 device found with ID: $deviceId"
         wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/dashboard/dashboardPumpMO.json -O - |\
         sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" | \
+        sed "s/###DEVICE_NAME###/${DEVICE_NAME}/g" | \
         c8y inventory children create -f --id $deviceId --global --childType addition --template input.value
     fi
 done

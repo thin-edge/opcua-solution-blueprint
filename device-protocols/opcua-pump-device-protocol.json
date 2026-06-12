@@ -7,7 +7,7 @@
       "serverHasNodeWithValues": null,
       "serverObjectHasFragment": ""
     },
-    "description": "Device Type for Pump01",
+    "description": "Device Type for Pump01-###DEVICE_NAME###",
     "enabled": true,
     "mappings": [
       {
@@ -262,7 +262,7 @@
         "referencedNodeId": null
       }
     ],
-    "name": "Pump01",
+    "name": "Pump01-###DEVICE_NAME###",
     "overriddenSubscriptions": [
       {
         "browsePath": [

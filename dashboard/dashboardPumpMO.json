@@ -669,7 +669,7 @@
       }
     },
     "icon": "th",
-    "name": "Pump Dashboard",
+    "name": "Pump Dashboard - ###DEVICE_NAME###",
     "priority": 5000,
     "translateWidgetTitle": false,
     "widgetClasses": {
