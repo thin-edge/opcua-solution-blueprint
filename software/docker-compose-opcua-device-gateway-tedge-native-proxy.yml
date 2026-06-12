@@ -26,7 +26,7 @@ services:
       # You can put that in /etc/tedge/tedge.toml
       # [c8y.proxy.bind]
       # address = "0.0.0.0"
-      # or do tedge config set c8y.proxy.bind 0.0.0.0 on the host
+      # or do tedge config set c8y.proxy.bind.address 0.0.0.0 on the host
 
       # In addition the outbound proxy for the thinEdge cli inside the container has to be disabled otherwise it tries to reach the local proxy over the external proxy.
       - TEDGE_PROXY_ADDRESS=
