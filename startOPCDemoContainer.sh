@@ -83,7 +83,7 @@ while [ -z "$deviceId" ]; do
     deviceId=$(c8y inventory list \
     --type c8y_OpcuaDevice \
     --owner device_$DEVICE_NAME 2>/dev/null | \
-    jq -r .id)
+    jq -r .id | head -1)
     
     if [ -z "$deviceId" ] || [ "$deviceId" = "null" ]; then
         echo "Pump01 device not found yet, waiting 5 seconds..."
