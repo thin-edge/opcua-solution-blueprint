@@ -195,6 +195,18 @@ The `opcua-demo.sh` script combines setup and teardown into a single file. It ac
 
 Make sure you have an active `c8y` session (`set-session`) before running it.
 
+**Synopsis**
+
+```
+opcua-demo.sh <start|stop> [device-name] [--debug|-v]
+```
+
+| Argument | Description |
+|---|---|
+| `start` / `stop` | Required. Set up or tear down the demo. |
+| `device-name` | Optional. Name of the ThinEdge device (default: `ThinEdge-cooling-line3`). |
+| `--debug` / `-v` | Optional. Show error output from `c8y` commands (hidden by default). Useful for troubleshooting. |
+
 **Start the demo**
 
 Run locally:
@@ -207,6 +219,12 @@ Or directly from GitHub without cloning:
 
 ```bash
 sh <(wget -q -O - https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcua-demo.sh) start MyDeviceName
+```
+
+To see full error output while starting:
+
+```bash
+sh opcua-demo.sh start MyDeviceName --debug
 ```
 
 The script will:
@@ -230,12 +248,19 @@ Or directly from GitHub:
 sh <(wget -q -O - https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcua-demo.sh) stop MyDeviceName
 ```
 
-The script will:
-1. Look up the root device → OPCUAGateway → OPC-UA server managed object (following the device hierarchy)
-2. Delete the OPC-UA server via the `opcua-mgmt-service` REST API
-3. Delete the `Pump01-<device-name>` device protocol
-4. Delete the `opcua-server-<device-name>` and `opcua-device-gateway-<device-name>` software packages
-5. Delete the demo container and unregister the device from the tenant
+To see full error output while stopping:
+
+```bash
+sh opcua-demo.sh stop MyDeviceName --debug
+```
+
+The script will (in order):
+1. Look up the root device → OPCUAGateway → OPC-UA server → Pump device (following the device hierarchy)
+2. Delete the Pump device from the inventory
+3. Delete the OPC-UA server via the `opcua-mgmt-service` REST API
+4. Delete the `Pump01-<device-name>` device protocol
+5. Delete the `opcua-server-<device-name>` and `opcua-device-gateway-<device-name>` software packages
+6. Delete the demo container and unregister the device from the tenant
 
 ## Production like deployment examples
 

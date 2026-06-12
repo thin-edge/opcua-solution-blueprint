@@ -1,13 +1,33 @@
 #!/bin/sh
 
+# Parse flags and positional args
+DEBUG=0
+POS_ARGS=""
+for arg in "$@"; do
+    case "$arg" in
+        --debug|-v) DEBUG=1 ;;
+        *) POS_ARGS="$POS_ARGS $arg" ;;
+    esac
+done
+eval set -- $POS_ARGS
+
 COMMAND="${1}"
 DEVICE_NAME="${2:-ThinEdge-cooling-line3}"
+
+if [ "$DEBUG" = "1" ]; then
+    STDERR=/dev/stderr
+else
+    STDERR=/dev/null
+fi
 
 usage() {
     echo "Usage: $0 <start|stop> [device-name]"
     echo ""
     echo "  start [device-name]  Set up and start the OPC-UA demo (default: ThinEdge-cooling-line3)"
     echo "  stop  [device-name]  Tear down the OPC-UA demo and remove all artifacts"
+    echo ""
+    echo "Options:"
+    echo "  --debug, -v          Show error output from c8y commands (hidden by default)"
     exit 1
 }
 
@@ -18,7 +38,7 @@ start_demo() {
     echo "Starting OPC-UA demo for device: $DEVICE_NAME"
 
     # Check if device already exists
-    result=$(c8y inventory find --name "$DEVICE_NAME" --type thin-edge.io 2>/dev/null)
+    result=$(c8y inventory find --name "$DEVICE_NAME" --type thin-edge.io 2>$STDERR)
     if [ -n "$result" ]; then
         echo "Error: Device '$DEVICE_NAME' already exists. Please choose a different name."
         exit 1
@@ -28,7 +48,7 @@ start_demo() {
     c8y tedge demo start "$DEVICE_NAME" --features nopki
 
     # Create Software opcua-server only if it doesn't exist
-    if [ -z "$(c8y software find --name opcua-server-$DEVICE_NAME 2>/dev/null)" ]; then
+    if [ -z "$(c8y software get --id opcua-server-$DEVICE_NAME 2>$STDERR)" ]; then
         echo "Creating software opcua-server-$DEVICE_NAME..."
         c8y software create -f --name "opcua-server-$DEVICE_NAME" \
         --softwareType container-group \
@@ -40,7 +60,7 @@ start_demo() {
     fi
 
     # Create Software opcua-device-gateway only if it doesn't exist
-    if [ -z "$(c8y software find --name opcua-device-gateway-$DEVICE_NAME 2>/dev/null)" ]; then
+    if [ -z "$(c8y software get --id opcua-device-gateway-$DEVICE_NAME 2>$STDERR)" ]; then
         echo "Creating software opcua-device-gateway-$DEVICE_NAME..."
         c8y software create -f \
         --name "opcua-device-gateway-$DEVICE_NAME" \
@@ -69,7 +89,7 @@ start_demo() {
     # Wait for OPCUAGateway to appear as child of root device
     echo "Waiting for OPCUAGateway to be created..."
     while true; do
-        gateway=$(c8y inventory find --name OPCUAGateway --owner "device_$DEVICE_NAME" 2>/dev/null | jq -r .id)
+        gateway=$(c8y inventory find --name OPCUAGateway --owner "device_$DEVICE_NAME" 2>$STDERR | jq -r .id)
         if [ -n "$gateway" ]; then
             echo "OPCUAGateway found (ID: $gateway), creating OPC-UA server managed object..."
             OPCSERVER_DEVICE_ID=$(wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcserver.json -O - \
@@ -85,7 +105,7 @@ start_demo() {
     done
 
     # Create device protocol only if it doesn't exist
-    pump_result=$(c8y inventory find --name "Pump01-$DEVICE_NAME" --type c8y_OpcuaDeviceType 2>/dev/null)
+    pump_result=$(c8y inventory find --name "Pump01-$DEVICE_NAME" --type c8y_OpcuaDeviceType 2>$STDERR)
     if [ -z "$pump_result" ]; then
         echo "Creating device protocol Pump01-$DEVICE_NAME..."
         wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - \
@@ -102,7 +122,7 @@ start_demo() {
     while [ -z "$deviceId" ]; do
         deviceId=$(c8y inventory list \
         --type c8y_OpcuaDevice \
-        --owner "device_$DEVICE_NAME" 2>/dev/null | \
+        --owner "device_$DEVICE_NAME" 2>$STDERR | \
         jq -r .id | head -1)
 
         if [ -z "$deviceId" ] || [ "$deviceId" = "null" ]; then
@@ -129,7 +149,7 @@ stop_demo() {
 
     # Step 1: Find root device by name
     echo "Looking up root device $DEVICE_NAME..."
-    root_device=$(c8y inventory find --name "$DEVICE_NAME" --type thin-edge.io 2>/dev/null | jq -r .id | head -1)
+    root_device=$(c8y inventory find --name "$DEVICE_NAME" --type thin-edge.io 2>$STDERR | jq -r .id | head -1)
     if [ -z "$root_device" ] || [ "$root_device" = "null" ]; then
         echo "Error: Root device '$DEVICE_NAME' not found."
         exit 1
@@ -138,7 +158,7 @@ stop_demo() {
 
     # Step 2: Find OPCUAGateway as child device of root
     echo "Looking up OPCUAGateway (child of root device)..."
-    gateway=$(c8y inventory children list --id "$root_device" --childType device 2>/dev/null | \
+    gateway=$(c8y inventory children list --id "$root_device" --childType device 2>$STDERR | \
         jq -r 'select(.name == "OPCUAGateway") | .id' | head -1)
 
     if [ -n "$gateway" ] && [ "$gateway" != "null" ]; then
@@ -146,10 +166,24 @@ stop_demo() {
 
         # Step 3: Find opcserver as child device of OPCUAGateway
         echo "Looking up OPC-UA server (child of OPCUAGateway)..."
-        opcserver=$(c8y inventory children list --id "$gateway" --childType device 2>/dev/null | \
+        opcserver=$(c8y inventory children list --id "$gateway" --childType device 2>$STDERR | \
             jq -r .id | head -1)
 
         if [ -n "$opcserver" ] && [ "$opcserver" != "null" ]; then
+            # Step 4: Find and delete Pump device as child of opcserver
+            echo "Looking up Pump device (child of OPC-UA server)..."
+            pump_device=$(c8y inventory children list --id "$opcserver" --childType device 2>$STDERR | \
+                jq -r .id | head -1)
+
+            if [ -n "$pump_device" ] && [ "$pump_device" != "null" ]; then
+                echo "Deleting Pump device (ID: $pump_device)..."
+                c8y inventory delete -f --id "$pump_device"
+                echo "Pump device deleted."
+            else
+                echo "No Pump device found under OPC-UA server, skipping."
+            fi
+
+            # Step 5: Delete OPC-UA server via opcua-mgmt-service
             echo "Deleting OPC-UA server (ID: $opcserver) via opcua-mgmt-service..."
             c8y api DELETE -f "/service/opcua-mgmt-service/server/${gateway}/${opcserver}"
             echo "OPC-UA server deleted."
@@ -162,7 +196,7 @@ stop_demo() {
 
     # Delete device protocol Pump01-$DEVICE_NAME
     echo "Deleting device protocol Pump01-$DEVICE_NAME..."
-    protocol_id=$(c8y inventory find --name "Pump01-$DEVICE_NAME" --type c8y_OpcuaDeviceType 2>/dev/null | jq -r .id)
+    protocol_id=$(c8y inventory find --name "Pump01-$DEVICE_NAME" --type c8y_OpcuaDeviceType 2>$STDERR | jq -r .id)
     if [ -n "$protocol_id" ] && [ "$protocol_id" != "null" ]; then
         c8y inventory delete -f --id "$protocol_id"
         echo "Device protocol deleted (ID: $protocol_id)."
@@ -172,19 +206,19 @@ stop_demo() {
 
     # Delete software opcua-server-$DEVICE_NAME
     echo "Deleting software opcua-server-$DEVICE_NAME..."
-    c8y software delete -f --id "opcua-server-$DEVICE_NAME" 2>/dev/null && \
+    c8y software delete -f --id "opcua-server-$DEVICE_NAME" 2>$STDERR && \
         echo "Software opcua-server-$DEVICE_NAME deleted." || \
         echo "Software opcua-server-$DEVICE_NAME not found, skipping."
 
     # Delete software opcua-device-gateway-$DEVICE_NAME
     echo "Deleting software opcua-device-gateway-$DEVICE_NAME..."
-    c8y software delete -f --id "opcua-device-gateway-$DEVICE_NAME" 2>/dev/null && \
+    c8y software delete -f --id "opcua-device-gateway-$DEVICE_NAME" 2>$STDERR && \
         echo "Software opcua-device-gateway-$DEVICE_NAME deleted." || \
         echo "Software opcua-device-gateway-$DEVICE_NAME not found, skipping."
 
     # Delete the top level device and demo container
     echo "Deleting demo for $DEVICE_NAME..."
-    c8y tedge demo delete -f "$DEVICE_NAME"
+    c8y tedge demo delete  "$DEVICE_NAME"
 
     echo "Done. OPC-UA demo for '$DEVICE_NAME' has been removed."
 }
