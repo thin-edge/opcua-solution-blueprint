@@ -14,7 +14,7 @@
     - [Create a device protocol to read pump metrics](#create-a-device-protocol-to-read-pump-metrics)
     - [Deploy a dashboard to display pump metrics](#deploy-a-dashboard-to-display-pump-metrics)
     - [Remove demo container](#remove-demo-container)
-    - [Using the startOPCDemoContainer.sh script](#using-the-startopcdemocontainersh-script)
+    - [Using the opcua-demo.sh script](#using-the-opcua-demosh-script)
   - [Production like deployment examples](#production-like-deployment-examples)
     - [ThinEdge Native on linux host with docker](#thinedge-native-on-linux-host-with-docker)
       - [Adjust thinEdge.io configuration to let containers access the mqtt broker](#adjust-thinedgeio-configuration-to-let-containers-access-the-mqtt-broker)
@@ -187,31 +187,55 @@ After importing open Cockpit Application assign the Pump device to a group, open
 
 ### Remove demo container
 
-To remove the demo container and all its data you can execute:
+To remove the demo container and all its artifacts use the `opcua-demo.sh` script (see below).
+
+### Using the opcua-demo.sh script
+
+The `opcua-demo.sh` script combines setup and teardown into a single file. It accepts a `start` or `stop` command followed by an optional device name (default: `ThinEdge-cooling-line3`).
+
+Make sure you have an active `c8y` session (`set-session`) before running it.
+
+**Start the demo**
+
+Run locally:
 
 ```bash
-c8y tedge demo stop ThinEdge-cooling-line3
+sh opcua-demo.sh start MyDeviceName
 ```
 
-this will remove the demo container and all its data and also unregister the device from your tenant. You can add --keep to keep the device and user in cumulocity. Please keep in mind that by that the device an all child devices will be removed from your tenant but the opc-ua address space will remain. You can remove it manually using this command:
+Or directly from GitHub without cloning:
 
 ```bash
-c8y inventory find --type c8y_OpcuaNode | c8y inventory delete -f
+sh <(wget -q -O - https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcua-demo.sh) start MyDeviceName
 ```
 
-### Using the startOPCDemoContainer.sh script
+The script will:
+1. Start the ThinEdge demo container and register the device in your tenant
+2. Create and install the `opcua-server-<device-name>` and `opcua-device-gateway-<device-name>` software packages
+3. Wait for the OPCUAGateway child device to appear and register the OPC-UA server managed object
+4. Create the `Pump01-<device-name>` device protocol
+5. Wait for the Pump OPC-UA device to be created and deploy the `Pump Dashboard - <device-name>` dashboard
 
-You can also use the provided startOPCDemoContainer.sh script to start the demo container and deploy the opcua-server and opcua-device-gateway automatically. Make sure to set-session for the cli and then just execute:
+**Stop and remove the demo**
 
-```
-sh <(wget -q -O - https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/startOPCDemoContainer.sh)
+Run locally:
+
+```bash
+sh opcua-demo.sh stop MyDeviceName
 ```
 
-the script will use "ThinEdge-cooling-line3" as device name by default. You can change it by providing a parameter like:
+Or directly from GitHub:
 
+```bash
+sh <(wget -q -O - https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcua-demo.sh) stop MyDeviceName
 ```
-sh <(wget -q -O - https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/startOPCDemoContainer.sh) MydeviceName
-```
+
+The script will:
+1. Look up the root device → OPCUAGateway → OPC-UA server managed object (following the device hierarchy)
+2. Delete the OPC-UA server via the `opcua-mgmt-service` REST API
+3. Delete the `Pump01-<device-name>` device protocol
+4. Delete the `opcua-server-<device-name>` and `opcua-device-gateway-<device-name>` software packages
+5. Delete the demo container and unregister the device from the tenant
 
 ## Production like deployment examples
 
