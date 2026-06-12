@@ -1,6 +1,9 @@
 # OPC-UA Solution Blueprint
 
 - [OPC-UA Solution Blueprint](#opc-ua-solution-blueprint)
+  - [OPC-UA at a glance](#opc-ua-at-a-glance)
+    - [Cumulocity's OPC-UA Device Gateway high level architecture](#cumulocitys-opc-ua-device-gateway-high-level-architecture)
+    - [A word about address space and device protocols](#a-word-about-address-space-and-device-protocols)
   - [OPC-UA Demo using the ThinEdge Demo Container](#opc-ua-demo-using-the-thinedge-demo-container)
     - [Start ThinEdge Demo Container](#start-thinedge-demo-container)
     - [Deploy the opcua-server and opcua-device-gateway](#deploy-the-opcua-server-and-opcua-device-gateway)
@@ -22,6 +25,23 @@
     - [Migrating Device Protocols](#migrating-device-protocols)
 
 This repo should help you to quickly set up various deployment scenarios of the OPC-UA Device Gateway in combination with ThinEdge.io. It includes a demo simulating an industrial pump using ThinEdge, the OPC-UA Device Gateway, and an OPC-UA Simulation Server. In addition, it showcases examples of production-like deployments.
+
+## OPC-UA at a glance
+
+OPC-UA (Open Platform Communications Unified Architecture) is a machine-to-machine communication protocol for industrial automation developed by the OPC Foundation. It is designed to facilitate the exchange of data between devices and systems in industrial environments, regardless of the manufacturer or platform. OPC-UA provides a standardized way to represent and access data, making it easier for different devices and software applications to communicate with each other. It supports features such as data modeling, security, and scalability, making it a popular choice for industrial IoT applications.
+
+Many industrial companies use OPC-UA to standardize the access to their machines and devices. You an connect multiple PLCs and other devices to a single OPC-UA server and create a unified interface that stays consistent over your machine park. It is crucial to consolidate and separate the field bus "World" from the IT world. Hence you can be sure that no third party access is disturbing the critical machine communication. Cumulocity's OPC-UA Device Gateway allows you to connect your OPC-UA enabled machines and devices to Cumulocity and leverage the benefits of a cloud-based IoT platform for monitoring, analytics, and integration with other systems.
+
+### Cumulocity's OPC-UA Device Gateway high level architecture
+
+![High Level Architecture](images/opcua-integration-overview.png)
+
+### A word about address space and device protocols
+
+When you configure the connection to an OPC-UA server using the OPC-UA Device Gateway it will automatically scan the address space of the server provide it in Cumulocity. You can browse the address space in Cumulocity,and choose which values you want to read and send to Cumulocity as measurements, events or alarms. This is done via device protocols which you can create in Cumulocity.
+It is important to note that a device protocol (though you can limit it to one) is not tied to an OPC-UA server directly. Furthermore it defines a set of OPC-UA Browse paths which are evaluated against the address space of all configured OPC-UA servers.
+Does a opc-ua device Gateway find a match for a browse path in the address space of one OPC-UA server, it will create a child device below that server. This means if you have the same variable in the same browse path in all your OPC-UA servers address spaces you only have to define that once and it will be automatically applied to all servers. This allows you to easily scale your OPC-UA integration to multiple machines without the need to create individual device protocols for each machine.
+This even works even with just one opc-ua server, imagine a server with three pumps (like the simulation server we use in the demo) you can define one device protocol with the browse path to the pump "flow" variable but not from top level but just use the flow node. The gateway will automatically create three child devices for each pump and assign the pump speed variable to all three devices.
 
 ## OPC-UA Demo using the ThinEdge Demo Container
 
