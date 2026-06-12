@@ -14,41 +14,41 @@ fi
 c8y tedge demo start $DEVICE_NAME --features nopki
 
 # Create Software opcserver only if it doesn't exist
-if [ -z "$(c8y software find --name opcua-server 2>/dev/null)" ]; then
-    echo "Creating software opcua-server..."
-    c8y software create -f --name opcua-server \
+if [ -z "$(c8y software find --name opcua-server-$DEVICE_NAME 2>/dev/null)" ]; then
+    echo "Creating software opcua-server-$DEVICE_NAME..."
+    c8y software create -f --name opcua-server-$DEVICE_NAME \
     --softwareType container-group \
     --description "OPC-UA Demo Server to simulate an industrial pump" | \
     c8y software versions create -f --version 0.0.1 \
     --url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-demo-server.yml
 else
-    echo "Software opcua-server already exists, skipping creation."
+    echo "Software opcua-server-$DEVICE_NAME already exists, skipping creation."
 fi
 
 # Deploy Software opc-ua gateway only if it doesn't exist
-if [ -z "$(c8y software find --name opcua-device-gateway 2>/dev/null)" ]; then
-    echo "Creating software opcua-device-gateway..."
+if [ -z "$(c8y software find --name opcua-device-gateway-$DEVICE_NAME 2>/dev/null)" ]; then
+    echo "Creating software opcua-device-gateway-$DEVICE_NAME..."
     c8y software create -f \
-    --name opcua-device-gateway \
+    --name opcua-device-gateway-$DEVICE_NAME \
     --softwareType container-group \
     --description "Cumulocity OPC-UA Device Gateway" | \
     c8y software versions create -f \
     --version demo-container \
     --url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-device-gateway-demo-container.yml
 else
-    echo "Software opcua-device-gateway already exists, skipping creation."
+    echo "Software opcua-device-gateway-$DEVICE_NAME already exists, skipping creation."
 fi
 
 sleep 2
 # Install software on device
 c8y software versions install -f \
 --device $DEVICE_NAME \
---software opcua-server \
+--software opcua-server-$DEVICE_NAME \
 --version 0.0.1
 
 c8y software versions install -f \
 --device $DEVICE_NAME \
---software opcua-device-gateway \
+--software opcua-device-gateway-$DEVICE_NAME \
 --version demo-container
 
 
@@ -68,12 +68,12 @@ while true; do
 done
 
 # Install device protocol only if it doesn't exist
-pump_result=$(c8y inventory find --name "Pump01" --type c8y_OpcuaDeviceType 2>/dev/null)
+pump_result=$(c8y inventory find --name "Pump01-$DEVICE_NAME" --type c8y_OpcuaDeviceType 2>/dev/null)
 if [ -z "$pump_result" ]; then
-    echo "Creating device type Pump01..."
-    wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - | sed "s/###OPCSERVER_DEVICE_ID###/$OPCSERVER_DEVICE_ID/g" | c8y inventory create -f --name "Pump01" --type c8y_OpcuaDeviceType --template input.value
+    echo "Creating device type Pump01-$DEVICE_NAME..."
+    wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - | sed "s/###OPCSERVER_DEVICE_ID###/$OPCSERVER_DEVICE_ID/g" | c8y inventory create -f --name "Pump01-$DEVICE_NAME" --type c8y_OpcuaDeviceType --template input.value
 else
-    echo "Device type Pump01 already exists, skipping creation."
+    echo "Device type Pump01-$DEVICE_NAME already exists, skipping creation."
 fi
 
 # Wait for Pump01 device to be created
