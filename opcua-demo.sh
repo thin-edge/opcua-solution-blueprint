@@ -196,6 +196,44 @@ start_demo() {
 ###############################################################################
 # START, tedge-dot connector instead of the OPC-UA Device Gateway
 ###############################################################################
+# Run "$@" until it prints something, at most 5 times: a call that prints nothing failed, most
+# often a dropped connection to the tenant. Prints the output; fails when every try did.
+retry() {
+    tries=0
+    while :; do
+        out=$("$@")
+        if [ -n "$out" ]; then
+            printf '%s\n' "$out"
+            return 0
+        fi
+        tries=$((tries + 1))
+        [ "$tries" -ge 5 ] && return 1
+        echo "  no answer from the tenant, asking again..." >&2
+        sleep 5
+    done
+}
+
+lookup_device_id() {
+    c8y identity get --name "$DEVICE_NAME" 2>$STDERR | jq -r '.managedObject.id // empty'
+}
+
+# The managed object id of the demo device; stops when the tenant does not answer.
+device_id() {
+    if ! retry lookup_device_id; then
+        echo "Error: cannot look up device '$DEVICE_NAME' in Cumulocity." >&2
+        exit 1
+    fi
+}
+
+create_config() {
+    c8y configuration create -f --name "$3" --configurationType "$1" \
+        --description "tedge-dot OPC-UA demo ($DEVICE_NAME)" --file "$2" 2>$STDERR | jq -r '.id // empty'
+}
+
+send_config_op() {
+    c8y configuration send -f --device "$DEVICE_NAME" --configuration "$1" 2>$STDERR | jq -r '.id // empty'
+}
+
 # Upload file $2 as configuration type $1 to the configuration repository and send it to the
 # device, waiting for the operation.
 send_config() {
@@ -203,38 +241,51 @@ send_config() {
     c8y configuration list --name "$name" 2>$STDERR | jq -r '.id // empty' | while read -r old; do
         c8y configuration delete -f --id "$old" >/dev/null 2>$STDERR
     done
-    cfg=$(c8y configuration create -f --name "$name" --configurationType "$1" \
-        --description "tedge-dot OPC-UA demo ($DEVICE_NAME)" --file "$2" 2>$STDERR | jq -r '.id // empty')
-    if [ -z "$cfg" ]; then
+    if ! cfg=$(retry create_config "$1" "$2" "$name"); then
         echo "Error: cannot upload configuration $name"
         exit 1
     fi
     echo "Sending configuration $1 (waiting for the operation)..."
-    op=$(c8y configuration send -f --device "$DEVICE_NAME" --configuration "$cfg" 2>$STDERR | jq -r '.id // empty')
+    op=$(retry send_config_op "$cfg")
     wait_operation "Configuration $1" "$op" 5m
+}
+
+upload_config_op() {
+    c8y operations create -f --device "$1" --description "Get configuration $2" \
+        --data "{\"c8y_UploadConfigFile\":{\"type\":\"$2\"}}" 2>$STDERR | jq -r '.id // empty'
+}
+
+uploaded_event() {
+    c8y events list --device "$1" --type "$2" --pageSize 20 2>$STDERR \
+        | jq -r --arg op "$3" 'select(.c8y_IsBinary.name | endswith("-" + $op)) | .id' | head -n 1
 }
 
 # Fetch the device's configuration $1 into file $2: the device uploads it (c8y_UploadConfigFile)
 # as a binary attached to an event, named after the operation.
 fetch_config() {
-    device_id=$(c8y identity get --name "$DEVICE_NAME" 2>$STDERR | jq -r '.managedObject.id // empty')
+    dev=$(device_id) || exit 1
     echo "Fetching configuration $1 from the device (waiting for the operation)..."
-    op=$(c8y operations create -f --device "$device_id" --description "Get configuration $1" \
-        --data "{\"c8y_UploadConfigFile\":{\"type\":\"$1\"}}" 2>$STDERR | jq -r '.id // empty')
+    op=$(retry upload_config_op "$dev" "$1")
     wait_operation "Fetching $1" "$op" 2m
-    event=$(c8y events list --device "$device_id" --type "$1" --pageSize 20 2>$STDERR \
-        | jq -r --arg op "$op" 'select(.c8y_IsBinary.name | endswith("-" + $op)) | .id' | head -n 1)
-    if [ -z "$event" ] || ! c8y events downloadBinary --id "$event" --outputFileRaw "$2" >/dev/null 2>$STDERR; then
-        echo "Error: cannot download configuration $1 from the device"
-        exit 1
-    fi
+    tries=0
+    until event=$(retry uploaded_event "$dev" "$1" "$op") \
+        && c8y events downloadBinary --id "$event" --outputFileRaw "$2" >/dev/null 2>$STDERR \
+        && [ -s "$2" ]; do
+        tries=$((tries + 1))
+        if [ "$tries" -ge 5 ]; then
+            echo "Error: cannot download configuration $1 from the device"
+            exit 1
+        fi
+        sleep 5
+    done
 }
 
-# Wait until the device lists configuration type $1 (after its plugin list was updated).
+# Wait until the device lists configuration type $1 (after its plugin list was updated). A failed
+# lookup counts as "not yet".
 wait_config_type() {
-    device_id=$(c8y identity get --name "$DEVICE_NAME" 2>$STDERR | jq -r '.managedObject.id // empty')
+    dev=$(device_id) || exit 1
     tries=0
-    until c8y inventory get --id "$device_id" 2>$STDERR \
+    until c8y inventory get --id "$dev" 2>$STDERR \
         | jq -e --arg t "$1" '.c8y_SupportedConfigurations | index($t)' >/dev/null; do
         tries=$((tries + 1))
         if [ "$tries" -gt 24 ]; then
