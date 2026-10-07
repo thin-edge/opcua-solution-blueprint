@@ -184,14 +184,31 @@ start_demo() {
 ###############################################################################
 # START, tedge-dot connector instead of the OPC-UA Device Gateway
 ###############################################################################
-# Stop unless the operation (JSON from `c8y operations wait`) ended SUCCESSFUL.
-check_operation() {
-    status=$(echo "$2" | jq -r '.status // empty' 2>/dev/null)
+# Wait for operation $2 and stop unless it ended SUCCESSFUL. A wait that returns nothing (a
+# dropped connection to the tenant) is retried: the operation itself goes on regardless.
+wait_operation() {
+    if [ -z "$2" ]; then
+        echo "Error: $1: the operation could not be created."
+        exit 1
+    fi
+    attempt=0
+    while :; do
+        result=$(c8y operations wait --id "$2" --duration "$3" --status SUCCESSFUL --status FAILED 2>$STDERR)
+        status=$(echo "$result" | jq -r '.status // empty' 2>/dev/null)
+        [ -n "$status" ] && break
+        attempt=$((attempt + 1))
+        if [ "$attempt" -ge 5 ]; then
+            echo "Error: $1: no result for operation $2 (check it in Device Management)."
+            exit 1
+        fi
+        echo "  $1: no answer from the tenant, asking again..."
+        sleep 5
+    done
     if [ "$status" = "SUCCESSFUL" ]; then
         echo "  $1: done"
         return
     fi
-    echo "Error: $1 did not succeed (status: ${status:-unknown}): $(echo "$2" | jq -r '.failureReason // empty' 2>/dev/null)"
+    echo "Error: $1 did not succeed (operation $2, status $status): $(echo "$result" | jq -r '.failureReason // empty' 2>/dev/null)"
     exit 1
 }
 
@@ -209,23 +226,21 @@ start_tedge_dot() {
     fi
 
     echo "Installing $TEDGE_DOT_PACKAGE $TEDGE_DOT_VERSION (waiting for the operation)..."
-    result=$(c8y software versions install -f \
+    op=$(c8y software versions install -f \
     --device "$DEVICE_NAME" \
     --software "$TEDGE_DOT_PACKAGE" \
-    --version "$TEDGE_DOT_VERSION" | \
-    c8y operations wait --duration 10m --status SUCCESSFUL --status FAILED -f 2>$STDERR)
-    check_operation "Installing $TEDGE_DOT_PACKAGE" "$result"
+    --version "$TEDGE_DOT_VERSION" 2>$STDERR | jq -r '.id // empty')
+    wait_operation "Installing $TEDGE_DOT_PACKAGE" "$op" 10m
 
     # The connector config and the measurement units, installed on the device by
     # tedge-dot/setup-opcua-pump.sh (runs as tedge, like the service; no root needed).
     setup_url="${BLUEPRINT_BASE_URL}/tedge-dot/setup-opcua-pump.sh"
     echo "Deploying the tedge-dot OPC-UA config (waiting for the operation)..."
-    result=$(c8y operations create -f \
+    op=$(c8y operations create -f \
     --device "$DEVICE_NAME" \
     --description "Deploy tedge-dot OPC-UA pump config" \
-    --template "{c8y_Command: {text: '(curl -fsSL $setup_url || wget -qO- $setup_url) | sh -s -- ${BLUEPRINT_BASE_URL}'}}" | \
-    c8y operations wait --duration 5m --status SUCCESSFUL --status FAILED -f 2>$STDERR)
-    check_operation "Deploying the tedge-dot config" "$result"
+    --template "{c8y_Command: {text: '(curl -fsSL $setup_url || wget -qO- $setup_url) | sh -s -- ${BLUEPRINT_BASE_URL}'}}" 2>$STDERR | jq -r '.id // empty')
+    wait_operation "Deploying the tedge-dot config" "$op" 5m
 
     # Pump01 is registered by the connector's flows as a child device of the main device.
     echo "Waiting for Pump01 device to be created..."
