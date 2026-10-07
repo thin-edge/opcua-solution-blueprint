@@ -2,10 +2,19 @@
 
 # Parse flags and positional args
 DEBUG=0
+CONNECTOR=gateway
 POS_ARGS=""
+EXPECT_CONNECTOR=0
 for arg in "$@"; do
+    if [ "$EXPECT_CONNECTOR" = "1" ]; then
+        CONNECTOR="$arg"
+        EXPECT_CONNECTOR=0
+        continue
+    fi
     case "$arg" in
         --debug|-v) DEBUG=1 ;;
+        --connector) EXPECT_CONNECTOR=1 ;;
+        --connector=*) CONNECTOR="${arg#--connector=}" ;;
         *) POS_ARGS="$POS_ARGS $arg" ;;
     esac
 done
@@ -14,6 +23,16 @@ eval set -- $POS_ARGS
 COMMAND="${1}"
 DEVICE_NAME="${2:-ThinEdge-cooling-line3}"
 
+# Where the compose files, protocol, dashboard and tedge-dot config are downloaded from.
+# Override to try a branch, e.g.
+# BLUEPRINT_BASE_URL=https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/<branch>
+BLUEPRINT_BASE_URL="${BLUEPRINT_BASE_URL:-https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main}"
+
+# tedge-dot: the thin-edge.io OT connector (https://github.com/thin-edge/tedge-dot), installed
+# from the thin-edge.io community repository with the apt software type.
+TEDGE_DOT_PACKAGE=tedge-dot-rs
+TEDGE_DOT_VERSION="${TEDGE_DOT_VERSION:-0.0.11}"
+
 if [ "$DEBUG" = "1" ]; then
     STDERR=/dev/stderr
 else
@@ -21,12 +40,15 @@ else
 fi
 
 usage() {
-    echo "Usage: $0 <start|stop> [device-name]"
+    echo "Usage: $0 <start|stop> [device-name] [--connector gateway|tedge-dot] [--debug]"
     echo ""
     echo "  start [device-name]  Set up and start the OPC-UA demo (default: ThinEdge-cooling-line3)"
     echo "  stop  [device-name]  Tear down the OPC-UA demo and remove all artifacts"
     echo ""
     echo "Options:"
+    echo "  --connector <name>   What reads the OPC-UA server (start only):"
+    echo "                         gateway    Cumulocity OPC-UA Device Gateway container (default)"
+    echo "                         tedge-dot  thin-edge.io OT connector (tedge-dot), installed as a package"
     echo "  --debug, -v          Show error output from c8y commands (hidden by default)"
     exit 1
 }
@@ -35,7 +57,11 @@ usage() {
 # START
 ###############################################################################
 start_demo() {
-    echo "Starting OPC-UA demo for device: $DEVICE_NAME"
+    case "$CONNECTOR" in
+        gateway|tedge-dot) ;;
+        *) echo "Error: unknown connector '$CONNECTOR' (expected gateway or tedge-dot)"; usage ;;
+    esac
+    echo "Starting OPC-UA demo for device: $DEVICE_NAME (connector: $CONNECTOR)"
 
     # Check if device already exists
     result=$(c8y inventory find --name "$DEVICE_NAME" --type thin-edge.io 2>$STDERR)
@@ -54,9 +80,19 @@ start_demo() {
         --softwareType container-group \
         --description "OPC-UA Demo Server to simulate an industrial pump" | \
         c8y software versions create -f --version 0.0.1 \
-        --url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-demo-server.yml
+        --url ${BLUEPRINT_BASE_URL}/software/docker-compose-opcua-demo-server.yml
     else
         echo "Software opcua-server-$DEVICE_NAME already exists, skipping creation."
+    fi
+
+    if [ "$CONNECTOR" = "tedge-dot" ]; then
+        sleep 2
+        c8y software versions install -f \
+        --device "$DEVICE_NAME" \
+        --software "opcua-server-$DEVICE_NAME" \
+        --version 0.0.1
+        start_tedge_dot
+        return
     fi
 
     # Create Software opcua-device-gateway only if it doesn't exist
@@ -68,7 +104,7 @@ start_demo() {
         --description "Cumulocity OPC-UA Device Gateway" | \
         c8y software versions create -f \
         --version demo-container \
-        --url https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/software/docker-compose-opcua-device-gateway-demo-container.yml
+        --url ${BLUEPRINT_BASE_URL}/software/docker-compose-opcua-device-gateway-demo-container.yml
     else
         echo "Software opcua-device-gateway-$DEVICE_NAME already exists, skipping creation."
     fi
@@ -92,7 +128,7 @@ start_demo() {
         gateway=$(c8y inventory find --name OPCUAGateway --owner "device_$DEVICE_NAME" 2>$STDERR | jq -r .id)
         if [ -n "$gateway" ]; then
             echo "OPCUAGateway found (ID: $gateway), creating OPC-UA server managed object..."
-            OPCSERVER_DEVICE_ID=$(wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/opcserver.json -O - \
+            OPCSERVER_DEVICE_ID=$(wget -q ${BLUEPRINT_BASE_URL}/opcserver.json -O - \
                 | sed "s/###OWNER###/device_$DEVICE_NAME/g" \
                 | c8y inventory children create -f --id "$gateway" --childType device --global --template input.value \
                 | jq -r .id)
@@ -108,7 +144,7 @@ start_demo() {
     pump_result=$(c8y inventory find --name "Pump01-$DEVICE_NAME" --type c8y_OpcuaDeviceType 2>$STDERR)
     if [ -z "$pump_result" ]; then
         echo "Creating device protocol Pump01-$DEVICE_NAME..."
-        wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/device-protocols/opcua-pump-device-protocol.json -O - \
+        wget -q ${BLUEPRINT_BASE_URL}/device-protocols/opcua-pump-device-protocol.json -O - \
         | sed "s/###OPCSERVER_DEVICE_ID###/$OPCSERVER_DEVICE_ID/g" \
         | sed "s/###DEVICE_NAME###/$DEVICE_NAME/g" \
         | c8y inventory create -f --name "Pump01-$DEVICE_NAME" --type c8y_OpcuaDeviceType --template input.value
@@ -131,7 +167,7 @@ start_demo() {
             sleep 5
         else
             echo "Pump01 device found with ID: $deviceId"
-            wget -q https://raw.githubusercontent.com/thin-edge/opcua-solution-blueprint/refs/heads/main/dashboard/dashboardPumpMO.json -O - \
+            wget -q ${BLUEPRINT_BASE_URL}/dashboard/dashboardPumpMO.json -O - \
             | sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" \
             | sed "s/###DEVICE_NAME###/${DEVICE_NAME}/g" \
             | c8y inventory children create -f --id "$deviceId" --global --childType addition --template input.value
@@ -139,6 +175,60 @@ start_demo() {
     done
 
     echo "Done. OPC-UA demo for '$DEVICE_NAME' is up and running."
+}
+
+###############################################################################
+# START, tedge-dot connector instead of the OPC-UA Device Gateway
+###############################################################################
+start_tedge_dot() {
+    # The apt package from the community repository: the software name must be the package
+    # name, so this entry is shared between demos and not removed by `stop`.
+    if [ -z "$(c8y software get --id "$TEDGE_DOT_PACKAGE" 2>$STDERR)" ]; then
+        echo "Creating software $TEDGE_DOT_PACKAGE..."
+        c8y software create -f --name "$TEDGE_DOT_PACKAGE" \
+        --softwareType apt \
+        --description "thin-edge.io OT connector (Modbus, OPC UA, CAN, SNMP, ...)" >/dev/null
+    fi
+    if [ -z "$(c8y software versions list --software "$TEDGE_DOT_PACKAGE" 2>$STDERR | jq -r "select(.c8y_Software.version == \"$TEDGE_DOT_VERSION\") | .id")" ]; then
+        c8y software versions create -f --software "$TEDGE_DOT_PACKAGE" --version "$TEDGE_DOT_VERSION" >/dev/null
+    fi
+
+    echo "Installing $TEDGE_DOT_PACKAGE $TEDGE_DOT_VERSION (waiting for the operation)..."
+    c8y software versions install -f \
+    --device "$DEVICE_NAME" \
+    --software "$TEDGE_DOT_PACKAGE" \
+    --version "$TEDGE_DOT_VERSION" | \
+    c8y operations wait --duration 10m --status SUCCESSFUL --status FAILED -f | \
+    jq -r '"  operation \(.id): \(.status) \(.failureReason // "")"'
+
+    # The connector config: a new file in /etc/tedge/plugins/ot (owned by tedge, like the
+    # service), then SIGHUP so the running service starts a connector for it.
+    config_url="${BLUEPRINT_BASE_URL}/tedge-dot/opcua-pump.toml"
+    echo "Deploying the tedge-dot OPC-UA config (waiting for the operation)..."
+    c8y operations create -f \
+    --device "$DEVICE_NAME" \
+    --description "Deploy tedge-dot OPC-UA pump config" \
+    --template "{c8y_Command: {text: 'set -e; (curl -fsSL $config_url || wget -qO- $config_url) > /etc/tedge/plugins/ot/opcua-pump.toml; pkill -HUP -x tedge-dot'}}" | \
+    c8y operations wait --duration 5m --status SUCCESSFUL --status FAILED -f | \
+    jq -r '"  operation \(.id): \(.status) \(.failureReason // "")"'
+
+    # Pump01 is registered by the connector's flows as a child device of the main device.
+    echo "Waiting for Pump01 device to be created..."
+    deviceId=""
+    while [ -z "$deviceId" ]; do
+        deviceId=$(c8y identity get --name "$DEVICE_NAME:device:Pump01" --type c8y_Serial 2>$STDERR | jq -r '.managedObject.id // empty')
+        if [ -z "$deviceId" ]; then
+            echo "Pump01 device not found yet, waiting 5 seconds..."
+            sleep 5
+        fi
+    done
+    echo "Pump01 device found with ID: $deviceId"
+    wget -q ${BLUEPRINT_BASE_URL}/dashboard/dashboardPumpMO.json -O - \
+    | sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" \
+    | sed "s/###DEVICE_NAME###/${DEVICE_NAME}/g" \
+    | c8y inventory children create -f --id "$deviceId" --global --childType addition --template input.value
+
+    echo "Done. OPC-UA demo for '$DEVICE_NAME' is up and running, read by tedge-dot."
 }
 
 ###############################################################################
@@ -192,6 +282,13 @@ stop_demo() {
         fi
     else
         echo "OPCUAGateway not found as child of root device, skipping OPC-UA server deletion."
+    fi
+
+    # tedge-dot variant: Pump01 is a child device registered by the connector
+    pump_tedge_dot=$(c8y identity get --name "$DEVICE_NAME:device:Pump01" --type c8y_Serial 2>$STDERR | jq -r '.managedObject.id // empty')
+    if [ -n "$pump_tedge_dot" ]; then
+        echo "Deleting tedge-dot Pump01 device (ID: $pump_tedge_dot)..."
+        c8y inventory delete -f --id "$pump_tedge_dot"
     fi
 
     # Delete device protocol Pump01-$DEVICE_NAME
