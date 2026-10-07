@@ -275,8 +275,19 @@ sh opcua-demo.sh start MyDeviceName --connector tedge-dot
 The script then:
 1. Starts the ThinEdge demo container and the `opcua-server-<device-name>` container, as in the gateway demo
 2. Installs the `tedge-dot-rs` package (0.0.11) from the thin-edge.io community repository through software management (software type `apt`)
-3. Runs [`tedge-dot/setup-opcua-pump.sh`](tedge-dot/setup-opcua-pump.sh) on the device with a shell (`c8y_Command`) operation. It installs [`tedge-dot/opcua-pump.toml`](tedge-dot/opcua-pump.toml) in `/etc/tedge/plugins/ot/`, publishes the measurement units and reloads tedge-dot
+3. Delivers the connector configuration through **configuration management**. The files in [`tedge-dot/`](tedge-dot/) are uploaded to the configuration repository as `<type>-<device-name>` and sent to the device in this order:
+
+   | Configuration type | File | Purpose |
+   |---|---|---|
+   | `tedge-configuration-plugin` | [`tedge-configuration-plugin.toml`](tedge-dot/tedge-configuration-plugin.toml) | the demo container's configuration types plus the three below |
+   | `tedge-dot-post-update` | [`post-update.sh`](tedge-dot/post-update.sh) | after a tedge-dot config changed: reloads tedge-dot and publishes the measurement units |
+   | `config_update-workflow` | [`config_update.toml`](tedge-dot/config_update.toml) | thin-edge.io's `config_update` workflow plus a step that runs `post-update.sh` |
+   | `tedge-dot-opcua-pump` | [`opcua-pump.toml`](tedge-dot/opcua-pump.toml) | the connector configuration: which OPC-UA nodes to read and how they map to Cumulocity |
+
+   The device fetches every file from Cumulocity, so it needs no access to GitHub and no remote shell.
 4. Waits for the `Pump01` child device and deploys the `Pump Dashboard - <device-name>` dashboard on it
+
+To change what is read, edit `tedge-dot-opcua-pump` in the device's **Configuration** tab (or the repository entry) and send it again. The workflow applies it and reloads tedge-dot.
 
 Pump01 publishes what the gateway's device protocol publishes, so the same dashboard works:
 
@@ -286,9 +297,11 @@ Pump01 publishes what the gateway's device protocol publishes, so the same dashb
 | `activeAlarm` | alarm `pumpAlert` (CRITICAL, "Pump in alert state") while the value is not 0, cleared when it returns to 0 |
 | `status` | event `pumpState` ("Pump state Running") whenever the status changes |
 
-The child device is named `Pump01` (external id `<device-name>:device:Pump01`) and has the type `opcua-demo-pump`. To read more variables, add points to `opcua-pump.toml`; its comments and the [tedge-dot README](https://github.com/thin-edge/tedge-dot) explain the format. `stop` works the same for both connectors. The `tedge-dot-rs` software entry is named after the package, so it is shared between demos and `stop` leaves it in place.
+The child device is named `Pump01` (external id `<device-name>:device:Pump01`) and has the type `opcua-demo-pump`. To read more variables, add points to `opcua-pump.toml`; its comments and the [tedge-dot README](https://github.com/thin-edge/tedge-dot) explain the format. `stop` works the same for both connectors and also deletes the four configuration repository entries. The `tedge-dot-rs` software entry is named after the package, so it is shared between demos and `stop` leaves it in place.
 
 Notes:
+- Units: tedge-dot 0.0.11 keeps a point's `unit` in its samples but does not pass it on to the Cumulocity measurement. `post-update.sh` publishes the units as thin-edge.io measurement metadata (`te/device/<device>///m/<type>/meta`, retained), so Cumulocity receives them. A measurement sent before that step carries no unit; the next one does.
+- `tedge-configuration-plugin.toml` replaces the device's list of configuration types. It holds the demo container's own types; on another device, add that device's types to it first.
 - `TEDGE_DOT_VERSION` selects another package version.
 - tedge-dot 0.0.11 addresses nodes by NodeId, not by browse path. The demo server creates its nodes in a fixed order, so Pump01's NodeIds are stable.
 - Running the script without a terminal (e.g. in CI): set `CI=1`. Otherwise `c8y tedge demo start` reads device names from standard input and bootstraps nothing.
