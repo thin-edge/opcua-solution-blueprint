@@ -283,6 +283,9 @@ fetch_config() {
 # Wait until the device lists configuration type $1 (after its plugin list was updated). A failed
 # lookup counts as "not yet".
 wait_config_type() {
+    # The device needs a few seconds to apply the list and report its types: checking at once
+    # only adds calls to the tenant.
+    sleep 10
     dev=$(device_id) || exit 1
     tries=0
     until c8y inventory get --id "$dev" 2>$STDERR \
