@@ -12,14 +12,14 @@
 # Pump01 becomes a child device named "Pump01" of the thin-edge.io device.
 # `opcua-demo.sh start <device> --connector tedge-dot` pushes this file through Cumulocity
 # configuration management as type `tedge-dot-opcua-pump`. Edit it in the device's
-# Configuration tab and send it again to change what is read. By hand:
+# Configuration tab and send it again to change what is read: tedge-dot (0.0.13 and later)
+# notices the changed file within a few seconds and reloads it. By hand:
 #
-#   cp opcua-pump.toml /etc/tedge/plugins/ot/ && systemctl reload tedge-dot
+#   cp opcua-pump.toml /etc/tedge/plugins/ot/
 #
-# Units: tedge-dot 0.0.11 does not pass `unit` on to the Cumulocity measurement;
-# post-update.sh publishes it as thin-edge.io measurement metadata after every update.
+# Each point's `unit` reaches Cumulocity as thin-edge.io measurement metadata.
 #
-# tedge-dot 0.0.11 addresses nodes by NodeId. The demo server creates its nodes in a fixed
+# The config addresses nodes by NodeId. The demo server creates its nodes in a fixed
 # order, so Pump01's ids are stable (namespace 2 is http://www.cumulocity.com).
 
 [connector]

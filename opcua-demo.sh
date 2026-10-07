@@ -31,10 +31,13 @@ BLUEPRINT_BASE_URL="${BLUEPRINT_BASE_URL:-https://raw.githubusercontent.com/thin
 # tedge-dot: the thin-edge.io OT connector (https://github.com/thin-edge/tedge-dot), installed
 # from the thin-edge.io community repository with the apt software type.
 TEDGE_DOT_PACKAGE=tedge-dot-rs
-TEDGE_DOT_VERSION="${TEDGE_DOT_VERSION:-0.0.11}"
-# Configuration types the tedge-dot variant pushes (files in tedge-dot/); each is stored in the
-# configuration repository as <type>-<device-name>.
-TEDGE_DOT_CONFIG_TYPES="tedge-configuration-plugin tedge-dot-post-update config_update-workflow tedge-dot-opcua-pump"
+TEDGE_DOT_VERSION="${TEDGE_DOT_VERSION:-0.0.13}"
+# Configuration types the tedge-dot variant pushes; each is stored in the configuration repository
+# as <type>-<device-name>.
+TEDGE_DOT_CONFIG_TYPES="tedge-configuration-plugin tedge-dot-opcua-pump"
+# Where the connector config lives on the device: tedge-dot reads every *.toml in this directory
+# and reloads by itself when one changes.
+TEDGE_DOT_CONFIG_PATH=/etc/tedge/plugins/ot/opcua-pump.toml
 
 if [ "$DEBUG" = "1" ]; then
     STDERR=/dev/stderr
@@ -187,21 +190,15 @@ start_demo() {
 ###############################################################################
 # START, tedge-dot connector instead of the OPC-UA Device Gateway
 ###############################################################################
-# Upload tedge-dot/$2 as configuration type $1 to the configuration repository and send it to
-# the device, waiting for the operation.
-push_config() {
-    dir=$(mktemp -d)
-    if ! wget -q "${BLUEPRINT_BASE_URL}/tedge-dot/$2" -O "$dir/$2"; then
-        echo "Error: cannot download ${BLUEPRINT_BASE_URL}/tedge-dot/$2"
-        exit 1
-    fi
+# Upload file $2 as configuration type $1 to the configuration repository and send it to the
+# device, waiting for the operation.
+send_config() {
     name="$1-$DEVICE_NAME"
     c8y configuration list --name "$name" 2>$STDERR | jq -r '.id // empty' | while read -r old; do
         c8y configuration delete -f --id "$old" >/dev/null 2>$STDERR
     done
     cfg=$(c8y configuration create -f --name "$name" --configurationType "$1" \
-        --description "tedge-dot OPC-UA demo ($DEVICE_NAME)" --file "$dir/$2" 2>$STDERR | jq -r '.id // empty')
-    rm -rf "$dir"
+        --description "tedge-dot OPC-UA demo ($DEVICE_NAME)" --file "$2" 2>$STDERR | jq -r '.id // empty')
     if [ -z "$cfg" ]; then
         echo "Error: cannot upload configuration $name"
         exit 1
@@ -209,6 +206,22 @@ push_config() {
     echo "Sending configuration $1 (waiting for the operation)..."
     op=$(c8y configuration send -f --device "$DEVICE_NAME" --configuration "$cfg" 2>$STDERR | jq -r '.id // empty')
     wait_operation "Configuration $1" "$op" 5m
+}
+
+# Fetch the device's configuration $1 into file $2: the device uploads it (c8y_UploadConfigFile)
+# as a binary attached to an event, named after the operation.
+fetch_config() {
+    device_id=$(c8y identity get --name "$DEVICE_NAME" 2>$STDERR | jq -r '.managedObject.id // empty')
+    echo "Fetching configuration $1 from the device (waiting for the operation)..."
+    op=$(c8y operations create -f --device "$device_id" --description "Get configuration $1" \
+        --data "{\"c8y_UploadConfigFile\":{\"type\":\"$1\"}}" 2>$STDERR | jq -r '.id // empty')
+    wait_operation "Fetching $1" "$op" 2m
+    event=$(c8y events list --device "$device_id" --type "$1" --pageSize 20 2>$STDERR \
+        | jq -r --arg op "$op" 'select(.c8y_IsBinary.name | endswith("-" + $op)) | .id' | head -n 1)
+    if [ -z "$event" ] || ! c8y events downloadBinary --id "$event" --outputFileRaw "$2" >/dev/null 2>$STDERR; then
+        echo "Error: cannot download configuration $1 from the device"
+        exit 1
+    fi
 }
 
 # Wait until the device lists configuration type $1 (after its plugin list was updated).
@@ -274,18 +287,35 @@ start_tedge_dot() {
     --version "$TEDGE_DOT_VERSION" 2>$STDERR | jq -r '.id // empty')
     wait_operation "Installing $TEDGE_DOT_PACKAGE" "$op" 10m
 
-    # The connector config reaches the device through configuration management: the files are
-    # uploaded to the configuration repository and sent with c8y_DownloadConfigFile, so the device
-    # fetches them from Cumulocity. In this order:
-    #   1. the configuration plugin's list, extended by the three types below;
-    #   2. post-update.sh, which reloads tedge-dot after one of its configs changed;
-    #   3. the config_update workflow, extended by a step that runs post-update.sh;
-    #   4. the connector config itself, which that step now applies.
-    push_config tedge-configuration-plugin tedge-configuration-plugin.toml
+    # The connector config reaches the device through configuration management, so the device
+    # fetches it from Cumulocity:
+    #   1. the device's list of configuration types (tedge-configuration-plugin) is fetched, the
+    #      connector config is added to it, and the list is sent back;
+    #   2. the connector config itself is sent. tedge-dot notices the new file and loads it.
+    dir=$(mktemp -d)
+    fetch_config tedge-configuration-plugin "$dir/tedge-configuration-plugin.toml"
+    if grep -q "^type *= *[\"']tedge-dot-opcua-pump[\"']" "$dir/tedge-configuration-plugin.toml"; then
+        echo "The device already manages tedge-dot-opcua-pump."
+    else
+        cat >>"$dir/tedge-configuration-plugin.toml" <<EOF
+
+# tedge-dot OPC-UA demo: the connector configuration (added by opcua-demo.sh)
+[[files]]
+path = '$TEDGE_DOT_CONFIG_PATH'
+type = 'tedge-dot-opcua-pump'
+user = 'tedge'
+group = 'tedge'
+mode = 0o644
+EOF
+        send_config tedge-configuration-plugin "$dir/tedge-configuration-plugin.toml"
+    fi
     wait_config_type tedge-dot-opcua-pump
-    push_config tedge-dot-post-update post-update.sh
-    push_config config_update-workflow config_update.toml
-    push_config tedge-dot-opcua-pump opcua-pump.toml
+    if ! wget -q "${BLUEPRINT_BASE_URL}/tedge-dot/opcua-pump.toml" -O "$dir/opcua-pump.toml"; then
+        echo "Error: cannot download ${BLUEPRINT_BASE_URL}/tedge-dot/opcua-pump.toml"
+        exit 1
+    fi
+    send_config tedge-dot-opcua-pump "$dir/opcua-pump.toml"
+    rm -rf "$dir"
 
     # Pump01 is registered by the connector's flows as a child device of the main device.
     echo "Waiting for Pump01 device to be created..."
