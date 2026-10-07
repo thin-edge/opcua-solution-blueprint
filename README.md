@@ -15,6 +15,7 @@
     - [Deploy a dashboard to display pump metrics](#deploy-a-dashboard-to-display-pump-metrics)
     - [Remove demo container](#remove-demo-container)
     - [Using the opcua-demo.sh script](#using-the-opcua-demosh-script)
+  - [OPC-UA Demo with the thin-edge.io OT connector (tedge-dot)](#opc-ua-demo-with-the-thin-edgeio-ot-connector-tedge-dot)
   - [Production like deployment examples](#production-like-deployment-examples)
     - [ThinEdge Native on linux host with docker](#thinedge-native-on-linux-host-with-docker)
       - [Adjust thinEdge.io configuration to let containers access the mqtt broker](#adjust-thinedgeio-configuration-to-let-containers-access-the-mqtt-broker)
@@ -198,13 +199,14 @@ Make sure you have an active `c8y` session (`set-session`) before running it.
 **Synopsis**
 
 ```
-opcua-demo.sh <start|stop> [device-name] [--debug|-v]
+opcua-demo.sh <start|stop> [device-name] [--connector gateway|tedge-dot] [--debug|-v]
 ```
 
 | Argument | Description |
 |---|---|
 | `start` / `stop` | Required. Set up or tear down the demo. |
 | `device-name` | Optional. Name of the ThinEdge device (default: `ThinEdge-cooling-line3`). |
+| `--connector` | Optional, `start` only. `gateway` (default): the Cumulocity OPC-UA Device Gateway. `tedge-dot`: the thin-edge.io OT connector, see [below](#opc-ua-demo-with-the-thin-edgeio-ot-connector-tedge-dot). `stop` removes either. |
 | `--debug` / `-v` | Optional. Show error output from `c8y` commands (hidden by default). Useful for troubleshooting. |
 
 **Start the demo**
@@ -261,6 +263,35 @@ The script will (in order):
 4. Delete the `Pump01-<device-name>` device protocol
 5. Delete the `opcua-server-<device-name>` and `opcua-device-gateway-<device-name>` software packages
 6. Delete the demo container and unregister the device from the tenant
+
+## OPC-UA Demo with the thin-edge.io OT connector (tedge-dot)
+
+Instead of the OPC-UA Device Gateway, the demo can use [tedge-dot](https://github.com/thin-edge/tedge-dot), the thin-edge.io OT connector. It runs as a native thin-edge.io service on the device and reads the OPC-UA server directly. There is no gateway container, no OPC-UA server registration in Cumulocity, and no device protocol: the data points are defined in a configuration file on the device.
+
+```bash
+sh opcua-demo.sh start MyDeviceName --connector tedge-dot
+```
+
+The script then:
+1. Starts the ThinEdge demo container and the `opcua-server-<device-name>` container, as in the gateway demo
+2. Installs the `tedge-dot-rs` package (0.0.11) from the thin-edge.io community repository through software management (software type `apt`)
+3. Runs [`tedge-dot/setup-opcua-pump.sh`](tedge-dot/setup-opcua-pump.sh) on the device with a shell (`c8y_Command`) operation. It installs [`tedge-dot/opcua-pump.toml`](tedge-dot/opcua-pump.toml) in `/etc/tedge/plugins/ot/`, publishes the measurement units and reloads tedge-dot
+4. Waits for the `Pump01` child device and deploys the `Pump Dashboard - <device-name>` dashboard on it
+
+Pump01 publishes what the gateway's device protocol publishes, so the same dashboard works:
+
+| OPC-UA variable | Cumulocity |
+|---|---|
+| `operatingLevel`, `flow`, `power`, `runHours`, `filterState`, `inflowTemperature`, `bearingTemperature` | measurements; type, fragment and series are the variable's name, with the same units |
+| `activeAlarm` | alarm `pumpAlert` (CRITICAL, "Pump in alert state") while the value is not 0, cleared when it returns to 0 |
+| `status` | event `pumpState` ("Pump state Running") whenever the status changes |
+
+The child device is named `Pump01` (external id `<device-name>:device:Pump01`) and has the type `opcua-demo-pump`. To read more variables, add points to `opcua-pump.toml`; its comments and the [tedge-dot README](https://github.com/thin-edge/tedge-dot) explain the format. `stop` works the same for both connectors. The `tedge-dot-rs` software entry is named after the package, so it is shared between demos and `stop` leaves it in place.
+
+Notes:
+- `TEDGE_DOT_VERSION` selects another package version.
+- tedge-dot 0.0.11 addresses nodes by NodeId, not by browse path. The demo server creates its nodes in a fixed order, so Pump01's NodeIds are stable.
+- Running the script without a terminal (e.g. in CI): set `CI=1`. Otherwise `c8y tedge demo start` reads device names from standard input and bootstraps nothing.
 
 ## Production like deployment examples
 
