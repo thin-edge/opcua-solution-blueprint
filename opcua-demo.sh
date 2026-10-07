@@ -78,10 +78,16 @@ start_demo() {
 
     # Start Demo Container
     c8y tedge demo start "$DEVICE_NAME" --features nopki
-    if [ -z "$(c8y identity get --name "$DEVICE_NAME" 2>$STDERR | jq -r '.managedObject.id // empty')" ]; then
-        echo "Error: device '$DEVICE_NAME' was not registered in Cumulocity; check the 'c8y tedge demo start' output above."
-        exit 1
-    fi
+    # The device's identity can take a few seconds to appear after the bootstrap.
+    tries=0
+    until [ -n "$(c8y identity get --name "$DEVICE_NAME" 2>$STDERR | jq -r '.managedObject.id // empty')" ]; do
+        tries=$((tries + 1))
+        if [ "$tries" -gt 12 ]; then
+            echo "Error: device '$DEVICE_NAME' was not registered in Cumulocity; check the 'c8y tedge demo start' output above."
+            exit 1
+        fi
+        sleep 5
+    done
 
     # Create Software opcua-server only if it doesn't exist
     if [ -z "$(c8y software get --id opcua-server-$DEVICE_NAME 2>$STDERR)" ]; then
