@@ -194,7 +194,7 @@ wait_operation() {
     attempt=0
     while :; do
         result=$(c8y operations wait --id "$2" --duration "$3" --status SUCCESSFUL --status FAILED 2>$STDERR)
-        status=$(echo "$result" | jq -r '.status // empty' 2>/dev/null)
+        status=$(printf '%s\n' "$result" | jq -r '.status // empty' 2>/dev/null)
         [ -n "$status" ] && break
         attempt=$((attempt + 1))
         if [ "$attempt" -ge 5 ]; then
@@ -208,7 +208,7 @@ wait_operation() {
         echo "  $1: done"
         return
     fi
-    echo "Error: $1 did not succeed (operation $2, status $status): $(echo "$result" | jq -r '.failureReason // empty' 2>/dev/null)"
+    echo "Error: $1 did not succeed (operation $2, status $status): $(printf '%s\n' "$result" | jq -r '.failureReason // empty' 2>/dev/null)"
     exit 1
 }
 
