@@ -9,10 +9,15 @@
 #   alarm         pumpAlert (CRITICAL) while activeAlarm is not 0, cleared when it returns to 0
 #   event         pumpState "Pump state <status>" whenever status changes
 #
-# Pump01 becomes a child device named "Pump01" of the thin-edge.io device. Install it with
-# `opcua-demo.sh start <device> --connector tedge-dot`, or by hand:
+# Pump01 becomes a child device named "Pump01" of the thin-edge.io device.
+# `opcua-demo.sh start <device> --connector tedge-dot` pushes this file through Cumulocity
+# configuration management as type `tedge-dot-opcua-pump`. Edit it in the device's
+# Configuration tab and send it again to change what is read. By hand:
 #
 #   cp opcua-pump.toml /etc/tedge/plugins/ot/ && systemctl reload tedge-dot
+#
+# Units: tedge-dot 0.0.11 does not pass `unit` on to the Cumulocity measurement;
+# post-update.sh publishes it as thin-edge.io measurement metadata after every update.
 #
 # tedge-dot 0.0.11 addresses nodes by NodeId. The demo server creates its nodes in a fixed
 # order, so Pump01's ids are stable (namespace 2 is http://www.cumulocity.com).

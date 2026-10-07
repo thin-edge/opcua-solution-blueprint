@@ -32,6 +32,9 @@ BLUEPRINT_BASE_URL="${BLUEPRINT_BASE_URL:-https://raw.githubusercontent.com/thin
 # from the thin-edge.io community repository with the apt software type.
 TEDGE_DOT_PACKAGE=tedge-dot-rs
 TEDGE_DOT_VERSION="${TEDGE_DOT_VERSION:-0.0.11}"
+# Configuration types the tedge-dot variant pushes (files in tedge-dot/); each is stored in the
+# configuration repository as <type>-<device-name>.
+TEDGE_DOT_CONFIG_TYPES="tedge-configuration-plugin tedge-dot-post-update config_update-workflow tedge-dot-opcua-pump"
 
 if [ "$DEBUG" = "1" ]; then
     STDERR=/dev/stderr
@@ -184,6 +187,45 @@ start_demo() {
 ###############################################################################
 # START, tedge-dot connector instead of the OPC-UA Device Gateway
 ###############################################################################
+# Upload tedge-dot/$2 as configuration type $1 to the configuration repository and send it to
+# the device, waiting for the operation.
+push_config() {
+    dir=$(mktemp -d)
+    if ! wget -q "${BLUEPRINT_BASE_URL}/tedge-dot/$2" -O "$dir/$2"; then
+        echo "Error: cannot download ${BLUEPRINT_BASE_URL}/tedge-dot/$2"
+        exit 1
+    fi
+    name="$1-$DEVICE_NAME"
+    c8y configuration list --name "$name" 2>$STDERR | jq -r '.id // empty' | while read -r old; do
+        c8y configuration delete -f --id "$old" >/dev/null 2>$STDERR
+    done
+    cfg=$(c8y configuration create -f --name "$name" --configurationType "$1" \
+        --description "tedge-dot OPC-UA demo ($DEVICE_NAME)" --file "$dir/$2" 2>$STDERR | jq -r '.id // empty')
+    rm -rf "$dir"
+    if [ -z "$cfg" ]; then
+        echo "Error: cannot upload configuration $name"
+        exit 1
+    fi
+    echo "Sending configuration $1 (waiting for the operation)..."
+    op=$(c8y configuration send -f --device "$DEVICE_NAME" --configuration "$cfg" 2>$STDERR | jq -r '.id // empty')
+    wait_operation "Configuration $1" "$op" 5m
+}
+
+# Wait until the device lists configuration type $1 (after its plugin list was updated).
+wait_config_type() {
+    device_id=$(c8y identity get --name "$DEVICE_NAME" 2>$STDERR | jq -r '.managedObject.id // empty')
+    tries=0
+    until c8y inventory get --id "$device_id" 2>$STDERR \
+        | jq -e --arg t "$1" '.c8y_SupportedConfigurations | index($t)' >/dev/null; do
+        tries=$((tries + 1))
+        if [ "$tries" -gt 24 ]; then
+            echo "Error: the device does not list configuration type $1."
+            exit 1
+        fi
+        sleep 5
+    done
+}
+
 # Wait for operation $2 and stop unless it ended SUCCESSFUL. A wait that returns nothing (a
 # dropped connection to the tenant) is retried: the operation itself goes on regardless.
 wait_operation() {
@@ -232,15 +274,18 @@ start_tedge_dot() {
     --version "$TEDGE_DOT_VERSION" 2>$STDERR | jq -r '.id // empty')
     wait_operation "Installing $TEDGE_DOT_PACKAGE" "$op" 10m
 
-    # The connector config and the measurement units, installed on the device by
-    # tedge-dot/setup-opcua-pump.sh (runs as tedge, like the service; no root needed).
-    setup_url="${BLUEPRINT_BASE_URL}/tedge-dot/setup-opcua-pump.sh"
-    echo "Deploying the tedge-dot OPC-UA config (waiting for the operation)..."
-    op=$(c8y operations create -f \
-    --device "$DEVICE_NAME" \
-    --description "Deploy tedge-dot OPC-UA pump config" \
-    --template "{c8y_Command: {text: '(curl -fsSL $setup_url || wget -qO- $setup_url) | sh -s -- ${BLUEPRINT_BASE_URL}'}}" 2>$STDERR | jq -r '.id // empty')
-    wait_operation "Deploying the tedge-dot config" "$op" 5m
+    # The connector config reaches the device through configuration management: the files are
+    # uploaded to the configuration repository and sent with c8y_DownloadConfigFile, so the device
+    # fetches them from Cumulocity. In this order:
+    #   1. the configuration plugin's list, extended by the three types below;
+    #   2. post-update.sh, which reloads tedge-dot after one of its configs changed;
+    #   3. the config_update workflow, extended by a step that runs post-update.sh;
+    #   4. the connector config itself, which that step now applies.
+    push_config tedge-configuration-plugin tedge-configuration-plugin.toml
+    wait_config_type tedge-dot-opcua-pump
+    push_config tedge-dot-post-update post-update.sh
+    push_config config_update-workflow config_update.toml
+    push_config tedge-dot-opcua-pump opcua-pump.toml
 
     # Pump01 is registered by the connector's flows as a child device of the main device.
     echo "Waiting for Pump01 device to be created..."
@@ -327,6 +372,14 @@ stop_demo() {
         echo "Deleting tedge-dot Pump01 device (ID: $pump_tedge_dot)..."
         c8y inventory delete -f --id "$pump_tedge_dot"
     fi
+
+    # tedge-dot variant: its entries in the configuration repository
+    for type in $TEDGE_DOT_CONFIG_TYPES; do
+        c8y configuration list --name "$type-$DEVICE_NAME" 2>$STDERR | jq -r '.id // empty' | while read -r cfg; do
+            echo "Deleting configuration $type-$DEVICE_NAME..."
+            c8y configuration delete -f --id "$cfg" >/dev/null
+        done
+    done
 
     # Delete device protocol Pump01-$DEVICE_NAME
     echo "Deleting device protocol Pump01-$DEVICE_NAME..."
