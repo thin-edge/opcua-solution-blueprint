@@ -72,6 +72,10 @@ start_demo() {
 
     # Start Demo Container
     c8y tedge demo start "$DEVICE_NAME" --features nopki
+    if [ -z "$(c8y identity get --name "$DEVICE_NAME" 2>$STDERR | jq -r '.managedObject.id // empty')" ]; then
+        echo "Error: device '$DEVICE_NAME' was not registered in Cumulocity; check the 'c8y tedge demo start' output above."
+        exit 1
+    fi
 
     # Create Software opcua-server only if it doesn't exist
     if [ -z "$(c8y software get --id opcua-server-$DEVICE_NAME 2>$STDERR)" ]; then
@@ -180,6 +184,17 @@ start_demo() {
 ###############################################################################
 # START, tedge-dot connector instead of the OPC-UA Device Gateway
 ###############################################################################
+# Stop unless the operation (JSON from `c8y operations wait`) ended SUCCESSFUL.
+check_operation() {
+    status=$(echo "$2" | jq -r '.status // empty' 2>/dev/null)
+    if [ "$status" = "SUCCESSFUL" ]; then
+        echo "  $1: done"
+        return
+    fi
+    echo "Error: $1 did not succeed (status: ${status:-unknown}): $(echo "$2" | jq -r '.failureReason // empty' 2>/dev/null)"
+    exit 1
+}
+
 start_tedge_dot() {
     # The apt package from the community repository: the software name must be the package
     # name, so this entry is shared between demos and not removed by `stop`.
@@ -194,30 +209,36 @@ start_tedge_dot() {
     fi
 
     echo "Installing $TEDGE_DOT_PACKAGE $TEDGE_DOT_VERSION (waiting for the operation)..."
-    c8y software versions install -f \
+    result=$(c8y software versions install -f \
     --device "$DEVICE_NAME" \
     --software "$TEDGE_DOT_PACKAGE" \
     --version "$TEDGE_DOT_VERSION" | \
-    c8y operations wait --duration 10m --status SUCCESSFUL --status FAILED -f | \
-    jq -r '"  operation \(.id): \(.status) \(.failureReason // "")"'
+    c8y operations wait --duration 10m --status SUCCESSFUL --status FAILED -f 2>$STDERR)
+    check_operation "Installing $TEDGE_DOT_PACKAGE" "$result"
 
     # The connector config: a new file in /etc/tedge/plugins/ot (owned by tedge, like the
     # service), then SIGHUP so the running service starts a connector for it.
     config_url="${BLUEPRINT_BASE_URL}/tedge-dot/opcua-pump.toml"
     echo "Deploying the tedge-dot OPC-UA config (waiting for the operation)..."
-    c8y operations create -f \
+    result=$(c8y operations create -f \
     --device "$DEVICE_NAME" \
     --description "Deploy tedge-dot OPC-UA pump config" \
     --template "{c8y_Command: {text: 'set -e; (curl -fsSL $config_url || wget -qO- $config_url) > /etc/tedge/plugins/ot/opcua-pump.toml; pkill -HUP -x tedge-dot'}}" | \
-    c8y operations wait --duration 5m --status SUCCESSFUL --status FAILED -f | \
-    jq -r '"  operation \(.id): \(.status) \(.failureReason // "")"'
+    c8y operations wait --duration 5m --status SUCCESSFUL --status FAILED -f 2>$STDERR)
+    check_operation "Deploying the tedge-dot config" "$result"
 
     # Pump01 is registered by the connector's flows as a child device of the main device.
     echo "Waiting for Pump01 device to be created..."
     deviceId=""
+    tries=0
     while [ -z "$deviceId" ]; do
         deviceId=$(c8y identity get --name "$DEVICE_NAME:device:Pump01" --type c8y_Serial 2>$STDERR | jq -r '.managedObject.id // empty')
         if [ -z "$deviceId" ]; then
+            tries=$((tries + 1))
+            if [ "$tries" -gt 60 ]; then
+                echo "Error: Pump01 did not appear within 5 minutes; check 'journalctl -u tedge-dot' on the device."
+                exit 1
+            fi
             echo "Pump01 device not found yet, waiting 5 seconds..."
             sleep 5
         fi
