@@ -1,0 +1,108 @@
+# tedge-dot OPC UA connector configuration for the demo pump (Pump01 of
+# https://github.com/thin-edge/opc-ua-demo-server).
+#
+# The alternative to the OPC-UA Device Gateway in this blueprint: the thin-edge.io connector
+# reads the server directly and publishes the same data the gateway's device protocol does
+# (device-protocols/opcua-pump-device-protocol.json), so the Pump Dashboard works unchanged:
+#
+#   measurements  type = fragment = series = <variable>, same units
+#   alarm         pumpAlert (CRITICAL) while activeAlarm is not 0, cleared when it returns to 0
+#   event         pumpState "Pump state <status>" whenever status changes
+#
+# Pump01 becomes a child device named "Pump01" of the thin-edge.io device.
+# `opcua-demo.sh start <device> --connector tedge-dot` pushes this file through Cumulocity
+# configuration management as type `tedge-dot-opcua-pump`. Edit it in the device's
+# Configuration tab and send it again to change what is read: tedge-dot (0.0.13 and later)
+# notices the changed file within a few seconds and reloads it. By hand:
+#
+#   cp opcua-pump.toml /etc/tedge/plugins/ot/
+#
+# Each point's `unit` reaches Cumulocity as thin-edge.io measurement metadata.
+#
+# The config addresses nodes by NodeId. The demo server creates its nodes in a fixed
+# order, so Pump01's ids are stable (namespace 2 is http://www.cumulocity.com).
+
+[connector]
+protocol      = "opcua"
+service_name  = "tedge-dot-opcua-pump"
+poll_interval = "3s"
+log_level     = "info"
+
+[mqtt]
+host = "127.0.0.1"
+port = 1883
+
+[connection]
+application_name = "tedge-dot-opcua-pump"
+application_uri  = "urn:tedge-dot-opcua-pump"
+security_policy  = "None"
+security_mode    = "none"
+
+[[device]]
+name             = "Pump01"
+type             = "opcua-demo-pump"
+# The demo server runs in the device's container host and publishes port 4840.
+protocol_address = { endpoint = "opc.tcp://127.0.0.1:4840/", security_policy = "None", security_mode = "none" }
+
+  [[device.point]]
+  id       = "operatingLevel"
+  datatype = "float64"
+  unit     = "%"
+  address  = { node_id = "ns=2;i=7" }
+  meta     = { measurement = { group = "operatingLevel", series = "operatingLevel" } }
+
+  # A string: not a measurement, but an event each time it changes (Idle / Running / Alarm).
+  [[device.point]]
+  id       = "status"
+  datatype = "string"
+  address  = { node_id = "ns=2;i=8" }
+  meta     = { measurement = false, event = { type = "pumpState", text = "Pump state {value}" } }
+
+  [[device.point]]
+  id       = "flow"
+  datatype = "float64"
+  unit     = "l/m"
+  address  = { node_id = "ns=2;i=9" }
+  meta     = { measurement = { group = "flow", series = "flow" } }
+
+  # 1 while the pump is in alarm: raises pumpAlert, and clears it when the value returns to 0.
+  [[device.point]]
+  id       = "activeAlarm"
+  datatype = "int64"
+  address  = { node_id = "ns=2;i=10" }
+  meta     = { measurement = false, alarm = { type = "pumpAlert", severity = "critical", text = "Pump in alert state", when = { not_equals = 0 } } }
+
+  [[device.point]]
+  id       = "power"
+  datatype = "float64"
+  unit     = "W"
+  address  = { node_id = "ns=2;i=11" }
+  meta     = { measurement = { group = "power", series = "power" } }
+
+  [[device.point]]
+  id       = "runHours"
+  datatype = "float64"
+  unit     = "h"
+  address  = { node_id = "ns=2;i=12" }
+  meta     = { measurement = { group = "runHours", series = "runHours" } }
+
+  [[device.point]]
+  id       = "filterState"
+  datatype = "float64"
+  unit     = "%"
+  address  = { node_id = "ns=2;i=13" }
+  meta     = { measurement = { group = "filterState", series = "filterState" } }
+
+  [[device.point]]
+  id       = "inflowTemperature"
+  datatype = "float64"
+  unit     = "c"
+  address  = { node_id = "ns=2;i=15" }
+  meta     = { measurement = { group = "inflowTemperature", series = "inflowTemperature" } }
+
+  [[device.point]]
+  id       = "bearingTemperature"
+  datatype = "float64"
+  unit     = "c"
+  address  = { node_id = "ns=2;i=16" }
+  meta     = { measurement = { group = "bearingTemperature", series = "bearingTemperature" } }
