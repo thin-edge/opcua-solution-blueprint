@@ -216,14 +216,14 @@ start_tedge_dot() {
     c8y operations wait --duration 10m --status SUCCESSFUL --status FAILED -f 2>$STDERR)
     check_operation "Installing $TEDGE_DOT_PACKAGE" "$result"
 
-    # The connector config: a new file in /etc/tedge/plugins/ot (owned by tedge, like the
-    # service), then SIGHUP so the running service starts a connector for it.
-    config_url="${BLUEPRINT_BASE_URL}/tedge-dot/opcua-pump.toml"
+    # The connector config and the measurement units, installed on the device by
+    # tedge-dot/setup-opcua-pump.sh (runs as tedge, like the service; no root needed).
+    setup_url="${BLUEPRINT_BASE_URL}/tedge-dot/setup-opcua-pump.sh"
     echo "Deploying the tedge-dot OPC-UA config (waiting for the operation)..."
     result=$(c8y operations create -f \
     --device "$DEVICE_NAME" \
     --description "Deploy tedge-dot OPC-UA pump config" \
-    --template "{c8y_Command: {text: 'set -e; (curl -fsSL $config_url || wget -qO- $config_url) > /etc/tedge/plugins/ot/opcua-pump.toml; pkill -HUP -x tedge-dot'}}" | \
+    --template "{c8y_Command: {text: '(curl -fsSL $setup_url || wget -qO- $setup_url) | sh -s -- ${BLUEPRINT_BASE_URL}'}}" | \
     c8y operations wait --duration 5m --status SUCCESSFUL --status FAILED -f 2>$STDERR)
     check_operation "Deploying the tedge-dot config" "$result"
 
@@ -247,7 +247,8 @@ start_tedge_dot() {
     wget -q ${BLUEPRINT_BASE_URL}/dashboard/dashboardPumpMO.json -O - \
     | sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" \
     | sed "s/###DEVICE_NAME###/${DEVICE_NAME}/g" \
-    | c8y inventory children create -f --id "$deviceId" --global --childType addition --template input.value
+    | c8y inventory children create -f --id "$deviceId" --global --childType addition --template input.value >/dev/null
+    echo "Pump Dashboard - $DEVICE_NAME created."
 
     echo "Done. OPC-UA demo for '$DEVICE_NAME' is up and running, read by tedge-dot."
 }
