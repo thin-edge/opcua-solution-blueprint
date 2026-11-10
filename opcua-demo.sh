@@ -30,14 +30,32 @@ BLUEPRINT_BASE_URL="${BLUEPRINT_BASE_URL:-https://raw.githubusercontent.com/thin
 
 # tedge-dot: the thin-edge.io OT connector (https://github.com/thin-edge/tedge-dot), installed
 # from the thin-edge.io community repository with the apt software type.
-TEDGE_DOT_PACKAGE=tedge-dot-rs
-TEDGE_DOT_VERSION="${TEDGE_DOT_VERSION:-0.0.13}"
+# The Rust build: the config reads fields of the demo server's custom structure PumpAlarmInfo,
+# which the C build (tedge-dot-c) cannot decode yet. Everything else works with either build.
+TEDGE_DOT_PACKAGE="${TEDGE_DOT_PACKAGE:-tedge-dot-rs}"
+TEDGE_DOT_VERSION="${TEDGE_DOT_VERSION:-0.0.18}"
+# tedge-dot bundles the measurements into groups (see tedge-dot/opcua-pump.toml), so they have
+# other fragments than the gateway's device protocol. The Pump Dashboard is adapted when it is
+# deployed: series -> "<fragment> <series>" as tedge-dot publishes it.
+TEDGE_DOT_DASHBOARD_MAP='{
+  "operatingLevel":     "process operatingLevel",
+  "flow":               "process flow",
+  "power":              "process power",
+  "inflowTemperature":  "temperature inflowTemperature_mean",
+  "bearingTemperature": "temperature bearingTemperature_mean",
+  "runHours":           "maintenance runHours",
+  "filterState":        "maintenance filterState"
+}'
 # Configuration types the tedge-dot variant pushes; each is stored in the configuration repository
 # as <type>-<device-name>.
 TEDGE_DOT_CONFIG_TYPES="tedge-configuration-plugin tedge-dot-opcua-pump"
 # Where the connector config lives on the device: tedge-dot reads every *.toml in this directory
 # and reloads by itself when one changes.
 TEDGE_DOT_CONFIG_PATH=/etc/tedge/plugins/ot/opcua-pump.toml
+# The Digital Twin Manager definition of Pump01's parameters, as `tedge-dot describe` renders it
+# from tedge-dot/opcua-pump.toml. Render it again when the config's writable points change.
+TEDGE_DOT_PARAMETERS=opcua-pump-parameters.json
+DTM_PROPERTIES=/service/dtm/definitions/properties
 
 if [ "$DEBUG" = "1" ]; then
     STDERR=/dev/stderr
@@ -327,6 +345,44 @@ wait_operation() {
     exit 1
 }
 
+# Declare Pump01's parameter set in the tenant, so the Parameters tab can edit it. A tenant
+# setting, like the software entry: shared between demos and not removed by `stop`. A
+# definition left from an older config (other points or limits) is replaced. Without the DTM
+# service the values are still on the device's managed object, just not editable.
+register_tedge_dot_parameters() {
+    wanted=$(wget -q "${BLUEPRINT_BASE_URL}/tedge-dot/$TEDGE_DOT_PARAMETERS" -O -) || {
+        echo "Error: cannot download ${BLUEPRINT_BASE_URL}/tedge-dot/$TEDGE_DOT_PARAMETERS"
+        exit 1
+    }
+    identifier=$(printf '%s' "$wanted" | jq -r .identifier)
+    if ! list=$(c8y api GET "$DTM_PROPERTIES?pageSize=2000" 2>$STDERR); then
+        echo "Warning: no Digital Twin Manager on this tenant; parameters are not editable."
+        return
+    fi
+    existing=$(printf '%s' "$list" | jq -c --arg id "$identifier" '
+        # c8y unwraps the collection into one item per line; plain JSON has .definitions
+        (if type == "array" then .[] elif has("definitions") then .definitions[] else . end)
+        | select(.identifier? == $id)')
+    if [ -n "$existing" ]; then
+        # Same properties with the same titles and limits: nothing to do.
+        if printf '%s\n%s' "$existing" "$wanted" | jq -se '
+            (.[0].jsonSchema.properties // {}) as $have | (.[1].jsonSchema.properties // {}) as $want
+            | ($have | keys) == ($want | keys)
+              and all($want | to_entries[]; . as $p | all($p.value | to_entries[]; $have[$p.key][.key] == .value))' >/dev/null; then
+            echo "Parameter definition $identifier is up to date."
+            return
+        fi
+        echo "Replacing parameter definition $identifier..."
+        contexts=$(printf '%s' "$existing" | jq -r '.contexts | join(",")')
+        c8y api DELETE -f "$DTM_PROPERTIES/$identifier?contexts=$contexts" 2>$STDERR >/dev/null
+    else
+        echo "Creating parameter definition $identifier..."
+    fi
+    if ! c8y api POST -f "$DTM_PROPERTIES" --data "$(printf '%s' "$wanted" | jq -c .)" </dev/null 2>$STDERR >/dev/null; then
+        echo "Warning: cannot create parameter definition $identifier; parameters are not editable."
+    fi
+}
+
 start_tedge_dot() {
     # The apt package from the community repository: the software name must be the package
     # name, so this entry is shared between demos and not removed by `stop`.
@@ -346,6 +402,8 @@ start_tedge_dot() {
     --software "$TEDGE_DOT_PACKAGE" \
     --version "$TEDGE_DOT_VERSION" 2>$STDERR | jq -r '.id // empty')
     wait_operation "Installing $TEDGE_DOT_PACKAGE" "$op" 10m
+
+    register_tedge_dot_parameters
 
     # The connector config reaches the device through configuration management, so the device
     # fetches it from Cumulocity:
@@ -397,6 +455,11 @@ EOF
     wget -q ${BLUEPRINT_BASE_URL}/dashboard/dashboardPumpMO.json -O - \
     | sed "s/###DASHBOARD_DEVICE_ID###/${deviceId}/g" \
     | sed "s/###DEVICE_NAME###/${DEVICE_NAME}/g" \
+    | jq --argjson map "$TEDGE_DOT_DASHBOARD_MAP" 'walk(
+        if type == "object" and has("fragment") and has("series") and $map[.series] then
+            ($map[.series] | split(" ")) as [$fragment, $series]
+            | .fragment = $fragment | .series = $series | .label = "\($fragment) → \($series)"
+        else . end)' \
     | c8y inventory children create -f --id "$deviceId" --global --childType addition --template input.value >/dev/null
     echo "Pump Dashboard - $DEVICE_NAME created."
 
