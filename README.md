@@ -315,6 +315,7 @@ Notes:
 - Units: each point's `unit` reaches Cumulocity as thin-edge.io measurement metadata (`te/device/<device>///m/<group>/meta`, retained), published by the connector.
 - `TEDGE_DOT_VERSION` selects another package version. The config needs 0.0.18 or later: earlier versions have no measurement output.
 - `TEDGE_DOT_PACKAGE=tedge-dot-c` installs the C build. Everything works except the `PumpAlarmInfo` fields, which then report bad quality: the typed alarms and the `alarmInfo` measurement stay away.
+- A demo started with an earlier version of this script keeps its old config and package: its Pump01 has no parameters (no **Parameters** tab), no typed alarms, and no `alarmInfo` measurement. Run `stop` and `start` for that device again to get the current config. To keep the device, install `tedge-dot-rs` 0.0.18 and send the current `tedge-dot-opcua-pump` config to it.
 - When the config's writable points change, render the parameter definition again with `tedge-dot describe --compact -c opcua-pump.toml` and replace `opcua-pump-parameters.json`.
 - The demo server's alarm events (`PumpAlarmEventType`) and history are not read: tedge-dot has no OPC UA event subscriptions or HistoryRead yet. The typed alarms come from the `PumpAlarmInfo` structure instead.
 - The config addresses nodes by NodeId, not by browse path. The demo server creates its nodes in a fixed order, so Pump01's NodeIds are stable; the `DataTypes` nodes have string ids (`ns=2;s=DataTypes.AlarmInfo`).
