@@ -1,31 +1,67 @@
 # tedge-dot OPC UA connector configuration for the demo pump (Pump01 of
-# https://github.com/thin-edge/opc-ua-demo-server).
+# https://github.com/thin-edge/opc-ua-demo-server, 0.1.0 and later).
 #
 # The alternative to the OPC-UA Device Gateway in this blueprint: the thin-edge.io connector
-# reads the server directly and publishes the same data the gateway's device protocol does
-# (device-protocols/opcua-pump-device-protocol.json), so the Pump Dashboard works unchanged:
+# reads the server directly and publishes the data the gateway's device protocol does
+# (device-protocols/opcua-pump-device-protocol.json):
 #
-#   measurements  type = fragment = series = <variable>, same units
 #   alarm         pumpAlert (CRITICAL) while activeAlarm is not 0, cleared when it returns to 0
 #   event         pumpState "Pump state <status>" whenever status changes
+#   measurements  the other variables, with the same series names and units
+#
+# and more than it does, to show what tedge-dot can do:
+#
+#   typed alarms  one alarm per alarm type (pumpFilterClogged, pumpOilLow, ...), read from a field
+#                 of the server's custom structure PumpAlarmInfo and mapped from its enum
+#   commands      pumpCommand event per command, pumpCommandFailed alarm when one was rejected
+#   parameters    defaultOperatingLevel, filterDegradationRate and autoResetMinutes in the
+#                 device's Parameters tab, written to the server when an operator changes them
+#   methods       startPump, stopPump, resetFilter, changeOil and setOperatingLevel, callable as
+#                 the ot_call_method command
+#
+# Structure fields need the Rust build, tedge-dot-rs: the C build cannot decode them yet.
+#
+# The connector publishes the measurements itself, bundled (measurement output, tedge-dot
+# 0.0.18 and later). Each bundle is one measurement group, so one Cumulocity measurement of type
+# <group> with fragment <group>, and each bundle shows another way tedge-dot reads and bundles:
+#
+#   (single)     activeAlarm, status       subscribed; one sample per change for the alarm and
+#                                          event flows, as the gateway's subscriptions
+#   process      operatingLevel, flow,     subscribed; values pushed within 500 ms go into one
+#                power                     measurement (group_by = "frame")
+#   temperature  inflowTemperature,        polled every 2 s; every 10 s the time-weighted mean,
+#                bearingTemperature        minimum and maximum (aggregate)
+#   maintenance  runHours, filterState,    polled every 10 s, one measurement per poll
+#                oilLevel                  (group_by = "time"), only when a value moved
+#                                          (report by exception) and at least once a minute
+#   alarmInfo    AlarmCount,               fields of the AlarmInfo structure, polled every 5 s,
+#                RemainingSeconds,         published when they change
+#                Severity
+#
+# The fragments differ from the gateway's, so opcua-demo.sh adapts the Pump Dashboard to them
+# when it deploys it (TEDGE_DOT_DASHBOARD_MAP).
 #
 # Pump01 becomes a child device named "Pump01" of the thin-edge.io device.
 # `opcua-demo.sh start <device> --connector tedge-dot` pushes this file through Cumulocity
 # configuration management as type `tedge-dot-opcua-pump`. Edit it in the device's
-# Configuration tab and send it again to change what is read: tedge-dot (0.0.13 and later)
-# notices the changed file within a few seconds and reloads it. By hand:
+# Configuration tab and send it again to change what is read: tedge-dot notices the changed
+# file within a few seconds and reloads it. By hand:
 #
 #   cp opcua-pump.toml /etc/tedge/plugins/ot/
 #
 # Each point's `unit` reaches Cumulocity as thin-edge.io measurement metadata.
 #
 # The config addresses nodes by NodeId. The demo server creates its nodes in a fixed
-# order, so Pump01's ids are stable (namespace 2 is http://www.cumulocity.com).
+# order, so Pump01's ids are stable (namespace 2 is http://www.cumulocity.com); the DataTypes
+# nodes have string ids. The server updates every variable together, every 2 s.
 
 [connector]
 protocol      = "opcua"
 service_name  = "tedge-dot-opcua-pump"
-poll_interval = "3s"
+# Publish thin-edge measurements from the connector, bundled per group, instead of one sample
+# per reading for the ot-measurement flow.
+output        = "measurements"
+poll_interval = "2s"
 log_level     = "info"
 
 [mqtt]
@@ -39,31 +75,15 @@ security_policy  = "None"
 security_mode    = "none"
 
 [[device]]
-name             = "Pump01"
-type             = "opcua-demo-pump"
+name              = "Pump01"
+type              = "opcua-demo-pump"
+# Subscribed points: the server samples them every second and queues up to 10 changes between
+# two publishes, the subscription parameters of the gateway's device protocol.
+sampling_interval = "1s"
 # The demo server runs in the device's container host and publishes port 4840.
-protocol_address = { endpoint = "opc.tcp://127.0.0.1:4840/", security_policy = "None", security_mode = "none" }
+protocol_address  = { endpoint = "opc.tcp://127.0.0.1:4840/", security_policy = "None", security_mode = "none", queue_size = 10 }
 
-  [[device.point]]
-  id       = "operatingLevel"
-  datatype = "float64"
-  unit     = "%"
-  address  = { node_id = "ns=2;i=7" }
-  meta     = { measurement = { group = "operatingLevel", series = "operatingLevel" } }
-
-  # A string: not a measurement, but an event each time it changes (Idle / Running / Alarm).
-  [[device.point]]
-  id       = "status"
-  datatype = "string"
-  address  = { node_id = "ns=2;i=8" }
-  meta     = { measurement = false, event = { type = "pumpState", text = "Pump state {value}" } }
-
-  [[device.point]]
-  id       = "flow"
-  datatype = "float64"
-  unit     = "l/m"
-  address  = { node_id = "ns=2;i=9" }
-  meta     = { measurement = { group = "flow", series = "flow" } }
+  # --- Single samples: alarm and event, subscribed -------------------------------------------
 
   # 1 while the pump is in alarm: raises pumpAlert, and clears it when the value returns to 0.
   [[device.point]]
@@ -72,37 +92,221 @@ protocol_address = { endpoint = "opc.tcp://127.0.0.1:4840/", security_policy = "
   address  = { node_id = "ns=2;i=10" }
   meta     = { measurement = false, alarm = { type = "pumpAlert", severity = "critical", text = "Pump in alert state", when = { not_equals = 0 } } }
 
+  # A string: not a measurement, but an event each time it changes (Idle / Running / Alarm).
+  [[device.point]]
+  id       = "status"
+  datatype = "string"
+  address  = { node_id = "ns=2;i=8" }
+  meta     = { measurement = false, event = { type = "pumpState", text = "Pump state {value}" } }
+
+  # The AlarmType field of the custom structure PumpAlarmInfo (node DataTypes.AlarmInfo). The
+  # connector reads the structure's layout from the server (DataTypeDefinition), so no type is
+  # compiled in. The enum arrives as its code; the map turns it into the type's name, and each
+  # alarm is raised while the label matches and cleared when the pump leaves the alarm.
+  [[device.point]]
+  id       = "alarmType"
+  datatype = "int32"
+  address  = { node_id = "ns=2;s=DataTypes.AlarmInfo", field = "AlarmType" }
+  map      = { cases = [
+      { eq = 0, to = "NoAlarm" }, { eq = 1, to = "FilterClogged" }, { eq = 2, to = "OilLow" },
+      { eq = 3, to = "BearingOverheated" }, { eq = 4, to = "PowerFailure" }, { eq = 5, to = "Leakage" },
+  ], default = "Unknown" }
+  meta     = { measurement = false, alarm = [
+      { type = "pumpFilterClogged",     severity = "major",    text = "Filter clogged",     when = { equals = "FilterClogged" } },
+      { type = "pumpOilLow",            severity = "major",    text = "Oil level low",      when = { equals = "OilLow" } },
+      { type = "pumpBearingOverheated", severity = "critical", text = "Bearing overheated", when = { equals = "BearingOverheated" } },
+      { type = "pumpPowerFailure",      severity = "critical", text = "Power failure",      when = { equals = "PowerFailure" } },
+      { type = "pumpLeakage",           severity = "critical", text = "Leakage detected",   when = { equals = "Leakage" } },
+  ] }
+
+  # The last command the pump received (a method call or a write), as an event when it changes,
+  # and an alarm while the pump rejected it.
+  [[device.point]]
+  id       = "lastCommand"
+  datatype = "string"
+  address  = { node_id = "ns=2;i=18" }
+  meta     = { measurement = false, event = { type = "pumpCommand", text = "Command {value}" } }
+
+  [[device.point]]
+  id       = "commandSuccess"
+  datatype = "bool"
+  address  = { node_id = "ns=2;i=19" }
+  meta     = { measurement = false, alarm = { type = "pumpCommandFailed", severity = "major", text = "The pump rejected the last command", when = { equals = false } } }
+
+  # --- process: subscribed, bundled per 500 ms frame -----------------------------------------
+
+  [[device.point]]
+  id       = "operatingLevel"
+  datatype = "float64"
+  unit     = "%"
+  address  = { node_id = "ns=2;i=7" }
+  meta     = { measurement = { group = "process", series = "operatingLevel" } }
+  batch    = { group_by = "frame", window = "500ms" }
+
+  [[device.point]]
+  id       = "flow"
+  datatype = "float64"
+  unit     = "l/m"
+  address  = { node_id = "ns=2;i=9" }
+  meta     = { measurement = { group = "process", series = "flow" } }
+  batch    = { group_by = "frame", window = "500ms" }
+
   [[device.point]]
   id       = "power"
   datatype = "float64"
   unit     = "W"
   address  = { node_id = "ns=2;i=11" }
-  meta     = { measurement = { group = "power", series = "power" } }
+  meta     = { measurement = { group = "process", series = "power" } }
+  batch    = { group_by = "frame", window = "500ms" }
+
+  # --- temperature: polled, aggregated every 10 s --------------------------------------------
+  # Publishes <series>_mean, <series>_min and <series>_max, each with the point's unit.
 
   [[device.point]]
-  id       = "runHours"
-  datatype = "float64"
-  unit     = "h"
-  address  = { node_id = "ns=2;i=12" }
-  meta     = { measurement = { group = "runHours", series = "runHours" } }
+  id            = "inflowTemperature"
+  datatype      = "float64"
+  unit          = "c"
+  address       = { node_id = "ns=2;i=15" }
+  subscribe     = false
+  poll_interval = "2s"
+  meta          = { measurement = { group = "temperature", series = "inflowTemperature" } }
+  batch         = { aggregate = ["mean", "min", "max"], every = "10s" }
 
   [[device.point]]
-  id       = "filterState"
-  datatype = "float64"
-  unit     = "%"
-  address  = { node_id = "ns=2;i=13" }
-  meta     = { measurement = { group = "filterState", series = "filterState" } }
+  id            = "bearingTemperature"
+  datatype      = "float64"
+  unit          = "c"
+  address       = { node_id = "ns=2;i=16" }
+  subscribe     = false
+  poll_interval = "2s"
+  meta          = { measurement = { group = "temperature", series = "bearingTemperature" } }
+  batch         = { aggregate = ["mean", "min", "max"], every = "10s" }
+
+  # --- maintenance: polled, one measurement per poll, report by exception --------------------
+  # Slow counters: published when they moved by the deadband, else once a minute (heartbeat).
 
   [[device.point]]
-  id       = "inflowTemperature"
-  datatype = "float64"
-  unit     = "c"
-  address  = { node_id = "ns=2;i=15" }
-  meta     = { measurement = { group = "inflowTemperature", series = "inflowTemperature" } }
+  id            = "runHours"
+  datatype      = "float64"
+  unit          = "h"
+  address       = { node_id = "ns=2;i=12" }
+  subscribe     = false
+  poll_interval = "10s"
+  meta          = { measurement = { group = "maintenance", series = "runHours" } }
+  report        = { deadband = 0.01, max_interval = "1m" }
 
   [[device.point]]
-  id       = "bearingTemperature"
-  datatype = "float64"
-  unit     = "c"
-  address  = { node_id = "ns=2;i=16" }
-  meta     = { measurement = { group = "bearingTemperature", series = "bearingTemperature" } }
+  id            = "filterState"
+  datatype      = "float64"
+  unit          = "%"
+  address       = { node_id = "ns=2;i=13" }
+  subscribe     = false
+  poll_interval = "10s"
+  meta          = { measurement = { group = "maintenance", series = "filterState" } }
+  report        = { deadband = 0.5, max_interval = "1m" }
+
+  [[device.point]]
+  id            = "oilLevel"
+  datatype      = "float64"
+  unit          = "%"
+  address       = { node_id = "ns=2;i=14" }
+  subscribe     = false
+  poll_interval = "10s"
+  meta          = { measurement = { group = "maintenance", series = "oilLevel" } }
+  report        = { deadband = 0.5, max_interval = "1m" }
+
+  # --- alarmInfo: fields of the PumpAlarmInfo structure, polled, on change ---------------------
+  # Fields of one node share one read per poll.
+
+  [[device.point]]
+  id            = "alarmCount"
+  datatype      = "uint32"
+  address       = { node_id = "ns=2;s=DataTypes.AlarmInfo", field = "AlarmCount" }
+  subscribe     = false
+  poll_interval = "5s"
+  meta          = { measurement = { group = "alarmInfo", series = "alarmCount" } }
+  report        = { on_change = true, max_interval = "5m" }
+
+  [[device.point]]
+  id            = "alarmRemainingSeconds"
+  datatype      = "int32"
+  unit          = "s"
+  address       = { node_id = "ns=2;s=DataTypes.AlarmInfo", field = "RemainingSeconds" }
+  subscribe     = false
+  poll_interval = "5s"
+  meta          = { measurement = { group = "alarmInfo", series = "remainingSeconds" } }
+  report        = { on_change = true, max_interval = "5m" }
+
+  [[device.point]]
+  id            = "alarmSeverity"
+  datatype      = "uint16"
+  address       = { node_id = "ns=2;s=DataTypes.AlarmInfo", field = "Severity" }
+  subscribe     = false
+  poll_interval = "5s"
+  meta          = { measurement = { group = "alarmInfo", series = "severity" } }
+  report        = { on_change = true, max_interval = "5m" }
+
+  # --- Parameters: writable settings, shown in the device's Parameters tab ---------------------
+  # Writable points are device parameters: the ot-parameter-state flow keeps the fragment
+  # opcua_demo_pump_control_parameters on Pump01 current, and an operator's change in the
+  # Parameters tab (c8y_ParameterUpdate) is written to the server. The server applies a write like
+  # the matching method and rejects an invalid value. opcua-demo.sh registers the parameter
+  # definitions (opcua-pump-parameters.json, from `tedge-dot describe`).
+
+  [[device.point]]
+  id          = "defaultOperatingLevel"
+  name        = "Default operating level"
+  description = "Operating level in % that startPump uses"
+  datatype    = "int64"
+  unit        = "%"
+  access      = "read_write"
+  address     = { node_id = "ns=2;i=22" }
+  meta        = { measurement = false, parameter = { min = 0, max = 100 } }
+
+  [[device.point]]
+  id          = "filterDegradationRate"
+  name        = "Filter degradation"
+  description = "Minutes until the filter is clogged at full load"
+  datatype    = "int64"
+  unit        = "min"
+  access      = "read_write"
+  address     = { node_id = "ns=2;i=20" }
+  meta        = { measurement = false, parameter = { min = 1, max = 1440 } }
+
+  [[device.point]]
+  id          = "autoResetMinutes"
+  name        = "Alarm auto-reset"
+  description = "Minutes the pump stays in alarm before it resets"
+  datatype    = "float64"
+  unit        = "min"
+  access      = "read_write"
+  address     = { node_id = "ns=2;i=21" }
+  meta        = { measurement = false, parameter = { min = 0.1, max = 60 } }
+
+  # --- Methods: the pump's OPC UA methods, called with the ot_call_method command --------------
+
+  [[device.point]]
+  id      = "startPump"
+  access  = "call_method"
+  address = { object_id = "ns=2;i=6", method_id = "ns=2;i=25" }
+
+  [[device.point]]
+  id      = "stopPump"
+  access  = "call_method"
+  address = { object_id = "ns=2;i=6", method_id = "ns=2;i=23" }
+
+  [[device.point]]
+  id      = "resetFilter"
+  access  = "call_method"
+  address = { object_id = "ns=2;i=6", method_id = "ns=2;i=36" }
+
+  [[device.point]]
+  id      = "changeOil"
+  access  = "call_method"
+  address = { object_id = "ns=2;i=6", method_id = "ns=2;i=38" }
+
+  # One argument: the level in % (0 to 100). Returns the new level, or -1 if it was rejected.
+  [[device.point]]
+  id      = "setOperatingLevel"
+  access  = "call_method"
+  address = { object_id = "ns=2;i=6", method_id = "ns=2;i=27", inputs = ["int64"] }

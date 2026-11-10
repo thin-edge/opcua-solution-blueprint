@@ -1,0 +1,44 @@
+{
+  "contexts": [
+    "asset",
+    "event",
+    "operation"
+  ],
+  "identifier": "opcua_demo_pump_control_parameters",
+  "jsonSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "description": "Writable opcua points exposed by tedge-dot (generated from the connector configuration)",
+    "properties": {
+      "autoResetMinutes": {
+        "description": "Minutes the pump stays in alarm before it resets [min]",
+        "maximum": 60.0,
+        "minimum": 0.1,
+        "order": 3,
+        "title": "Alarm auto-reset",
+        "type": "number"
+      },
+      "defaultOperatingLevel": {
+        "description": "Operating level in % that startPump uses [%]",
+        "maximum": 100.0,
+        "minimum": 0.0,
+        "order": 1,
+        "title": "Default operating level",
+        "type": "integer"
+      },
+      "filterDegradationRate": {
+        "description": "Minutes until the filter is clogged at full load [min]",
+        "maximum": 1440.0,
+        "minimum": 1.0,
+        "order": 2,
+        "title": "Filter degradation",
+        "type": "integer"
+      }
+    },
+    "title": "Opcua demo pump control parameters",
+    "type": "object"
+  },
+  "tags": [
+    "tedge-dot",
+    "opcua"
+  ]
+}

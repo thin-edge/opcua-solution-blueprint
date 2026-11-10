@@ -1,12 +1,18 @@
 services:
   opcserver:
     container_name: opcserver
-    image: ghcr.io/thin-edge/opc-ua-demo-server:latest
+    hostname: opcserver # the server certificate is issued for this name
+    # 0.1.0 adds the PumpAlarmInfo structure that the tedge-dot config reads
+    image: ghcr.io/thin-edge/opc-ua-demo-server:0.1.0
     restart: always
     ports:
       - "4840:4840"
+    volumes:
+      - opcua-certs:/certs # keeps the server certificate across restarts
     networks:
       backend:
 networks:
   backend:
     name: opc-ua-gateway_backend
+volumes:
+  opcua-certs:
