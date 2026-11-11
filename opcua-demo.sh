@@ -30,10 +30,10 @@ BLUEPRINT_BASE_URL="${BLUEPRINT_BASE_URL:-https://raw.githubusercontent.com/thin
 
 # tedge-dot: the thin-edge.io OT connector (https://github.com/thin-edge/tedge-dot), installed
 # from the thin-edge.io community repository with the apt software type.
-# The Rust build: the config reads fields of the demo server's custom structure PumpAlarmInfo,
-# which the C build (tedge-dot-c) cannot decode yet. Everything else works with either build.
-TEDGE_DOT_PACKAGE="${TEDGE_DOT_PACKAGE:-tedge-dot-rs}"
-TEDGE_DOT_VERSION="${TEDGE_DOT_VERSION:-0.0.18}"
+# The C build: from 0.0.20 on it also reads fields of the demo server's custom structure
+# PumpAlarmInfo. TEDGE_DOT_PACKAGE=tedge-dot-rs installs the Rust build, which reads the same.
+TEDGE_DOT_PACKAGE="${TEDGE_DOT_PACKAGE:-tedge-dot-c}"
+TEDGE_DOT_VERSION="${TEDGE_DOT_VERSION:-0.0.20}"
 # tedge-dot bundles the measurements into groups (see tedge-dot/opcua-pump.toml), so they have
 # other fragments than the gateway's device protocol. The Pump Dashboard is adapted when it is
 # deployed: series -> "<fragment> <series>" as tedge-dot publishes it.
