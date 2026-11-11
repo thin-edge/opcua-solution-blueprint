@@ -274,7 +274,7 @@ sh opcua-demo.sh start MyDeviceName --connector tedge-dot
 
 The script then:
 1. Starts the ThinEdge demo container and the `opcua-server-<device-name>` container (demo server 0.1.0), as in the gateway demo
-2. Installs the `tedge-dot-rs` package (0.0.18) from the thin-edge.io community repository through software management (software type `apt`). It is the Rust build: the config reads fields of the demo server's custom structure `PumpAlarmInfo`, which the C build cannot decode yet
+2. Installs the `tedge-dot-c` package (0.0.20) from the thin-edge.io community repository through software management (software type `apt`). It is the C build, which reads the fields of the demo server's custom structure `PumpAlarmInfo` from 0.0.20 on
 3. Delivers the connector configuration through **configuration management**:
    1. Fetches the device's `tedge-configuration-plugin` (its list of configuration types) with a *Get configuration* operation, adds the type `tedge-dot-opcua-pump` (file `/etc/tedge/plugins/ot/opcua-pump.toml`) and sends the list back. The device's other types stay as they are. A device that already lists the type is left alone.
    2. Sends [`opcua-pump.toml`](tedge-dot/opcua-pump.toml) as `tedge-dot-opcua-pump`: which OPC-UA nodes to read and how they map to Cumulocity.
@@ -285,7 +285,7 @@ The script then:
 
 To change what is read, edit `tedge-dot-opcua-pump` in the device's **Configuration** tab (or the repository entry) and send it again. tedge-dot notices the changed file within a few seconds and reloads it; nothing restarts. To restart the service after each update instead, add `service = 'tedge-dot'` to the type's entry in `tedge-configuration-plugin` ([thin-edge.io configuration management](https://thin-edge.github.io/thin-edge.io/operate/c8y/configuration-management/)).
 
-Pump01 publishes the data the gateway's device protocol publishes, and more, to show what tedge-dot can do. The connector bundles the measurements itself ([measurement output](https://github.com/thin-edge/tedge-dot/blob/0.0.18/doc/measurement-output.md)), and each bundle shows another way tedge-dot reads and bundles values:
+Pump01 publishes the data the gateway's device protocol publishes, and more, to show what tedge-dot can do. The connector bundles the measurements itself ([measurement output](https://github.com/thin-edge/tedge-dot/blob/0.0.20/doc/measurement-output.md)), and each bundle shows another way tedge-dot reads and bundles values:
 
 | OPC-UA variables | Read | Cumulocity |
 |---|---|---|
@@ -309,13 +309,13 @@ tedge mqtt pub -r te/device/Pump01///cmd/ot_call_method/c1 '{"status":"init","po
 tedge mqtt pub -r te/device/Pump01///cmd/ot_call_method/c2 '{"status":"init","point":"setOperatingLevel","arguments":[60]}'
 ```
 
-The child device is named `Pump01` (external id `<device-name>:device:Pump01`) and has the type `opcua-demo-pump`. To read more variables, add points to `opcua-pump.toml`; its comments and the [tedge-dot README](https://github.com/thin-edge/tedge-dot) explain the format. `stop` works the same for both connectors and also deletes the two configuration repository entries. The `tedge-dot-rs` software entry is named after the package and the parameter definition after the device type, so both are shared between demos and `stop` leaves them in place.
+The child device is named `Pump01` (external id `<device-name>:device:Pump01`) and has the type `opcua-demo-pump`. To read more variables, add points to `opcua-pump.toml`; its comments and the [tedge-dot README](https://github.com/thin-edge/tedge-dot) explain the format. `stop` works the same for both connectors and also deletes the two configuration repository entries. The `tedge-dot-c` software entry is named after the package and the parameter definition after the device type, so both are shared between demos and `stop` leaves them in place.
 
 Notes:
 - Units: each point's `unit` reaches Cumulocity as thin-edge.io measurement metadata (`te/device/<device>///m/<group>/meta`, retained), published by the connector.
-- `TEDGE_DOT_VERSION` selects another package version. The config needs 0.0.18 or later: earlier versions have no measurement output.
-- `TEDGE_DOT_PACKAGE=tedge-dot-c` installs the C build. Everything works except the `PumpAlarmInfo` fields, which then report bad quality: the typed alarms and the `alarmInfo` measurement stay away.
-- A demo started with an earlier version of this script keeps its old config and package: its Pump01 has no parameters (no **Parameters** tab), no typed alarms, and no `alarmInfo` measurement. Run `stop` and `start` for that device again to get the current config. To keep the device, install `tedge-dot-rs` 0.0.18 and send the current `tedge-dot-opcua-pump` config to it.
+- `TEDGE_DOT_VERSION` selects another package version. The config needs 0.0.18 or later, because earlier versions have no measurement output. With the C build, the `PumpAlarmInfo` fields need 0.0.20: on 0.0.18 they report bad quality, and the typed alarms and the `alarmInfo` measurement stay away.
+- `TEDGE_DOT_PACKAGE=tedge-dot-rs` installs the Rust build instead. It reads the same points, including the `PumpAlarmInfo` fields.
+- A demo started with an earlier version of this script keeps its old config and package: its Pump01 has no parameters (no **Parameters** tab), no typed alarms, and no `alarmInfo` measurement. Run `stop` and `start` for that device again to get the current config. To keep the device, install `tedge-dot-c` 0.0.20 and send the current `tedge-dot-opcua-pump` config to it.
 - When the config's writable points change, render the parameter definition again with `tedge-dot describe --compact -c opcua-pump.toml` and replace `opcua-pump-parameters.json`.
 - The demo server's alarm events (`PumpAlarmEventType`) and history are not read: tedge-dot has no OPC UA event subscriptions or HistoryRead yet. The typed alarms come from the `PumpAlarmInfo` structure instead.
 - The config addresses nodes by NodeId, not by browse path. The demo server creates its nodes in a fixed order, so Pump01's NodeIds are stable; the `DataTypes` nodes have string ids (`ns=2;s=DataTypes.AlarmInfo`).

@@ -19,7 +19,8 @@
 #   methods       startPump, stopPump, resetFilter, changeOil and setOperatingLevel, callable as
 #                 the ot_call_method command
 #
-# Structure fields need the Rust build, tedge-dot-rs: the C build cannot decode them yet.
+# Structure fields need tedge-dot 0.0.20 or later with the C build (tedge-dot-c), or the Rust
+# build (tedge-dot-rs) from 0.0.18.
 #
 # The connector publishes the measurements itself, bundled (measurement output, tedge-dot
 # 0.0.18 and later). Each bundle is one measurement group, so one Cumulocity measurement of type
